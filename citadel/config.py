@@ -191,11 +191,25 @@ DARK_THEME_CSS = """
         color: #ffffff !important;
         box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
     }
+    div[data-testid="stForm"] {
+        background-color: #141028 !important;
+        border: 1px solid #4338ca !important;
+        border-radius: 16px !important;
+        box-shadow: 0 0 22px rgba(99, 102, 241, 0.28) !important;
+    }
     .stTextInput > div > div, .stNumberInput > div > div, .stSelectbox > div > div, .stDateInput > div > div {
         background-color: #161226 !important;
         border: 1px solid #2b2347 !important;
         border-radius: 10px !important;
         color: #ffffff !important;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+    }
+    .stTextInput > div > div:hover, .stNumberInput > div > div:hover, .stSelectbox > div > div:hover, .stDateInput > div > div:hover {
+        border-color: #4f46e5 !important;
+    }
+    .stTextInput > div > div:focus-within, .stNumberInput > div > div:focus-within, .stSelectbox > div > div:focus-within, .stDateInput > div > div:focus-within {
+        border-color: #8b5cf6 !important;
+        box-shadow: 0 0 14px rgba(139, 92, 246, 0.5) !important;
     }
     .stButton > button, div[data-testid="stFormSubmitButton"] > button {
         background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%) !important;

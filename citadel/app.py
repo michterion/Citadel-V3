@@ -27,7 +27,7 @@ if st.session_state["auth_user"] is None:
     _, c_l2, _ = st.columns([1, 1.2, 1])
     with c_l2:
         st.markdown("""
-            <div class="bento-card" style="text-align: center; border: 1px solid #4338ca;">
+            <div class="bento-card" style="text-align: center; border: 1px solid #6366f1; box-shadow: 0 0 25px rgba(99, 102, 241, 0.35);">
                 <h2 style="font-weight: 800; margin-bottom: 4px;">CITADEL FOR NG</h2>
                 <div style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 24px;">System Ewidencji Składek i Finansów</div>
             </div>
