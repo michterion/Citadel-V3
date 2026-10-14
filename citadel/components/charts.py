@@ -154,53 +154,61 @@ def render_wykres_salda(punkty_x, punkty_saldo):
     )
     return fig
 
-def render_wykres_kdi(punkty_x, punkty_kdi):
+def render_wykres_kdi(punkty_x, punkty_kdi, kdi_val=None):
     """
     Wykres dynamiki wskaźnika KDI:
-    - Bez punktów (gładka linia neonowa).
-    - Czyste tło bez prostokątów i bez linii adnotacyjnych.
-    - Dynamiczne kolorowanie wg KDI: zielony (<= 1.0), żółty (1.0-1.2), czerwony (> 1.2), biały (brak).
+    - Bez punktów (gładka linia neonowa spline).
+    - Czyste tło (bez blokujących obszarów i bez linii adnotacyjnych).
+    - Skalowanie osi Y z marginesem poniżej 0 (pełna widoczność zakrzywienia w dół i poświaty).
+    - Dynamiczne kolorowanie zgodne z kolorem wskaźnika KDI danej osoby (pobierz_kolor_kdi).
     """
+    fig = go.Figure()
+
+    if not punkty_kdi or not punkty_x:
+        return fig
+
     valid_kdi = [v for v in punkty_kdi if v is not None]
-    max_kdi = max(valid_kdi) if valid_kdi else 2.0
-    y_max = max(max_kdi + 0.35, 1.8)
+    max_kdi = max(valid_kdi) if valid_kdi else 1.5
+    min_kdi = min(valid_kdi) if valid_kdi else 0.0
 
-    # Dynamiczne kolorowanie KDI:
-    # <= 1.00: Zielony neon (wzorowy / pełne opłacenie)
-    # 1.00 - 1.20: Żółty neon (w normie / granica karencji)
-    # > 1.20: Czerwony neon (przekroczona norma / utrata prawa głosu)
-    # None: Biały
-    ostatnie_kdi = valid_kdi[-1] if valid_kdi else None
-    if ostatnie_kdi is None:
-        kolor_kdi = '#ffffff'
-        r, g, b = 255, 255, 255
-    elif ostatnie_kdi <= 1.00:
-        kolor_kdi = '#22c55e'
-        r, g, b = 34, 197, 94
-    elif ostatnie_kdi <= 1.20:
-        kolor_kdi = '#facc15'
-        r, g, b = 250, 204, 21
-    else:
-        kolor_kdi = '#ef4444'
-        r, g, b = 239, 68, 68
+    # Rozpiętość osi Y z marginesem poniżej 0, by krzywa zbiegająca do 0 nie stykała się z krawędzią wykresu
+    min_val = min(min_kdi, 0.0)
+    rozstep = max_kdi - min_val if max_kdi > min_val else 1.0
+    margines_dol = max(rozstep * 0.12, 0.15)
+    margines_gora = max(rozstep * 0.15, 0.25)
 
+    y_dol = -margines_dol
+    y_gora = max(max_kdi + margines_gora, 1.25)
+
+    # Dynamiczne wyznaczenie koloru wg oficjalnego wskaźnika KDI osoby (lub ostatniego punktu)
+    efektywne_kdi = kdi_val if kdi_val is not None else (valid_kdi[-1] if valid_kdi else None)
+    kolor_kdi = pobierz_kolor_kdi(efektywne_kdi)
+
+    def hex_to_rgb(hex_c: str):
+        c = str(hex_c).lstrip('#')
+        if len(c) == 6:
+            try:
+                return tuple(int(c[i:i+2], 16) for i in (0, 2, 4))
+            except ValueError:
+                pass
+        return (74, 222, 128)
+
+    r, g, b = hex_to_rgb(kolor_kdi)
     kolor_poswiaty_mid = f'rgba({r}, {g}, {b}, 0.38)'
     kolor_poswiaty_outer = f'rgba({r}, {g}, {b}, 0.16)'
     kolor_wypelnienia = f'rgba({r}, {g}, {b}, 0.08)'
 
-    fig = go.Figure()
-
-    # 1. Niewidoczna linia bazowa na dole wykresu (y=0) dla wypełnienia
+    # 1. Niewidoczna linia bazowa na samym dole wykresu (y_dol) dla pełnego wypełnienia pod krzywą
     fig.add_trace(go.Scatter(
         x=punkty_x,
-        y=[0.0] * len(punkty_x),
+        y=[y_dol] * len(punkty_x),
         mode='lines',
         line=dict(width=0, color='rgba(0,0,0,0)'),
         hoverinfo='skip',
         showlegend=False
     ))
 
-    # 2. Półprzezroczyste wypełnienie pod wykresem w kolorze bieżącego KDI
+    # 2. Półprzezroczyste wypełnienie POD wykresem (od krzywej KDI w dół do y_dol)
     fig.add_trace(go.Scatter(
         x=punkty_x,
         y=punkty_kdi,
@@ -271,7 +279,7 @@ def render_wykres_kdi(punkty_x, punkty_kdi):
             showgrid=True,
             gridcolor='rgba(255, 255, 255, 0.06)',
             color='#94a3b8',
-            range=[0, y_max],
+            range=[y_dol, y_gora],
             tickformat='.2f',
             tickfont=dict(size=11, family='Inter, sans-serif')
         ),

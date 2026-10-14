@@ -111,7 +111,7 @@ def render_tab_profile(dane_przeliczone, dzis):
     with subtab_saldo:
         st.plotly_chart(render_wykres_salda(punkty_x, punkty_saldo), width="stretch", config=PLOTLY_CONFIG)
     with subtab_kdi:
-        st.plotly_chart(render_wykres_kdi(punkty_x, punkty_kdi), width="stretch", config=PLOTLY_CONFIG)
+        st.plotly_chart(render_wykres_kdi(punkty_x, punkty_kdi, kdi_val=osoba["kdi_val"]), width="stretch", config=PLOTLY_CONFIG)
 
     col_w, col_r, col_k = st.columns(3)
     with col_w:
