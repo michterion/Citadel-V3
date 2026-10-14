@@ -22,10 +22,10 @@ def render_tab_profile(dane_przeliczone, dzis):
     
     st.markdown(f"""
         <div class="profile-banner-card">
-            <div><span style="color: #94a3b8; font-size: 0.85rem;">CZŁONEK:</span> <strong style="color: #ffffff; font-size: 1rem;">{osoba['imie_nazwisko']}</strong></div>
-            <div><span style="color: #94a3b8; font-size: 0.85rem;">AKTUALNY KDI:</span> <strong style="color: {kolor_kdi_osoby}; font-size: 1.15rem; text-shadow: 0 0 10px {kolor_kdi_osoby}66;">{osoba['kdi_str']}</strong></div>
-            <div><span style="color: #94a3b8; font-size: 0.85rem;">SALDO:</span> <strong style="color: {'#10b981' if osoba['saldo_akt_pln'] >= 0 else '#f43f5e'}; font-size: 1rem;">{osoba['saldo_akt_pln']:.2f} zł</strong></div>
-            <div><span style="color: #94a3b8; font-size: 0.85rem;">GŁOSOWANIE:</span> <strong style="color: {kolor_glos}; font-size: 1.05rem; font-weight: 800;">{osoba['glosowanie_str']}</strong></div>
+            <div><span style="color: #94a3b8; font-size: 0.85rem;">CZŁONEK:</span> <strong style="font-size: 1rem;">{osoba['imie_nazwisko']}</strong></div>
+            <div><span style="color: #94a3b8; font-size: 0.85rem;">AKTUALNY KDI:</span> <strong style="color: {kolor_kdi_osoby} !important; -webkit-text-fill-color: {kolor_kdi_osoby} !important; font-size: 1.15rem; text-shadow: 0 0 10px {kolor_kdi_osoby}66;">{osoba['kdi_str']}</strong></div>
+            <div><span style="color: #94a3b8; font-size: 0.85rem;">SALDO:</span> <strong style="color: {'#10b981' if osoba['saldo_akt_pln'] >= 0 else '#f43f5e'} !important; -webkit-text-fill-color: {'#10b981' if osoba['saldo_akt_pln'] >= 0 else '#f43f5e'} !important; font-size: 1rem;">{osoba['saldo_akt_pln']:.2f} zł</strong></div>
+            <div><span style="color: #94a3b8; font-size: 0.85rem;">GŁOSOWANIE:</span> <strong style="color: {kolor_glos} !important; -webkit-text-fill-color: {kolor_glos} !important; font-size: 1.05rem; font-weight: 800;">{osoba['glosowanie_str']}</strong></div>
         </div>
     """, unsafe_allow_html=True)
 

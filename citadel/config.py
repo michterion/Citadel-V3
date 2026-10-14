@@ -217,7 +217,20 @@ DARK_THEME_CSS = """
         border-color: #8b5cf6 !important;
         box-shadow: 0 0 14px rgba(139, 92, 246, 0.5) !important;
     }
-    .stButton > button, div[data-testid="stFormSubmitButton"] > button {
+    .stButton > button,
+    .stButton > button *,
+    .stButton > button p,
+    .stButton > button span,
+    div[data-testid="stFormSubmitButton"] > button,
+    div[data-testid="stFormSubmitButton"] > button *,
+    div[data-testid="stFormSubmitButton"] > button p,
+    div[data-testid="stFormSubmitButton"] > button span,
+    div[data-testid="stDownloadButton"] > button,
+    div[data-testid="stDownloadButton"] > button * {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+    }
+    .stButton > button, div[data-testid="stFormSubmitButton"] > button, div[data-testid="stDownloadButton"] > button {
         background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%) !important;
         color: white !important;
         border: none !important;
@@ -355,9 +368,23 @@ MONO_THEME_CSS = """
         border-color: #a1a1aa !important;
         box-shadow: 0 0 14px rgba(255, 255, 255, 0.15) !important;
     }
-    .stButton > button, div[data-testid="stFormSubmitButton"] > button {
+    .stButton > button,
+    .stButton > button *,
+    .stButton > button p,
+    .stButton > button span,
+    div[data-testid="stFormSubmitButton"] > button,
+    div[data-testid="stFormSubmitButton"] > button *,
+    div[data-testid="stFormSubmitButton"] > button p,
+    div[data-testid="stFormSubmitButton"] > button span,
+    div[data-testid="stDownloadButton"] > button,
+    div[data-testid="stDownloadButton"] > button * {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+    }
+    .stButton > button, div[data-testid="stFormSubmitButton"] > button, div[data-testid="stDownloadButton"] > button {
         background: linear-gradient(135deg, #323238 0%, #202024 100%) !important;
         color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
         border: 1px solid #3f3f46 !important;
         border-radius: 10px !important;
         padding: 9px 22px !important;
@@ -365,10 +392,14 @@ MONO_THEME_CSS = """
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
         transition: all 0.2s ease !important;
     }
-    .stButton > button:hover, div[data-testid="stFormSubmitButton"] > button:hover {
+    .stButton > button:hover, div[data-testid="stFormSubmitButton"] > button:hover, div[data-testid="stDownloadButton"] > button:hover {
         background: linear-gradient(135deg, #3f3f46 0%, #27272c 100%) !important;
         border-color: #5f5f68 !important;
         box-shadow: 0 0 16px rgba(255, 255, 255, 0.1) !important;
+    }
+    .stButton > button:hover *, div[data-testid="stFormSubmitButton"] > button:hover *, div[data-testid="stDownloadButton"] > button:hover * {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
     }
     div[data-testid="stRadio"] label, div[data-testid="stRadio"] label p {
         color: #f4f4f5 !important;
@@ -388,26 +419,10 @@ MONO_THEME_CSS = """
         border-color: #a1a1aa !important;
     }
 
-    /* Tabele stDataFrame - dynamiczna desaturacja fioletowego canvasu do neutralnej szarości */
-    div[data-testid="stDataFrame"] canvas[data-testid="data-grid-canvas"],
-    div[data-testid="stDataFrame"] canvas {
-        filter: saturate(0) brightness(1.15) !important;
-    }
+    /* Tabele stDataFrame - zachowanie żywych kolorów wskaźników KDI oraz statusu TAK/NIE */
     div[data-testid="stDataFrame"] {
         border: 1px solid #2e2e34 !important;
         border-radius: 12px !important;
-        --gdg-bg-header: #1c1c20 !important;
-        --gdg-bg-header-hovered: #26262b !important;
-        --gdg-bg-header-has-focus: #26262b !important;
-        --gdg-bg-cell: #141416 !important;
-        --gdg-bg-cell-medium: #18181b !important;
-        --gdg-border-color: #2e2e34 !important;
-        --gdg-horizontal-border-color: #27272c !important;
-        --gdg-accent-color: #71717a !important;
-        --gdg-accent-light: rgba(255, 255, 255, 0.08) !important;
-        --gdg-text-header: #d4d4d8 !important;
-        --gdg-text-dark: #f4f4f5 !important;
-        --gdg-text-medium: #a1a1aa !important;
     }
 
     .login-header-card {
@@ -649,8 +664,26 @@ LIGHT_MONO_THEME_CSS = """
         font-weight: 600 !important;
     }
 
-    /* Przyciski */
-    .stButton > button, div[data-testid="stFormSubmitButton"] > button {
+    /* Przyciski - jednoznaczne białe litery na ciemnym tle, odporne na kaskadę */
+    .stButton > button,
+    .stButton > button *,
+    .stButton > button p,
+    .stButton > button span,
+    .stButton > button div,
+    div[data-testid="stFormSubmitButton"] > button,
+    div[data-testid="stFormSubmitButton"] > button *,
+    div[data-testid="stFormSubmitButton"] > button p,
+    div[data-testid="stFormSubmitButton"] > button span,
+    div[data-testid="stFormSubmitButton"] > button div,
+    div[data-testid="stDownloadButton"] > button,
+    div[data-testid="stDownloadButton"] > button *,
+    div[data-testid="stDownloadButton"] > button p,
+    div[data-testid="stDownloadButton"] > button span,
+    div[data-testid="stDownloadButton"] > button div {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+    }
+    .stButton > button, div[data-testid="stFormSubmitButton"] > button, div[data-testid="stDownloadButton"] > button {
         background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
         color: #ffffff !important;
         -webkit-text-fill-color: #ffffff !important;
@@ -661,10 +694,27 @@ LIGHT_MONO_THEME_CSS = """
         box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15) !important;
         transition: all 0.2s ease !important;
     }
-    .stButton > button:hover, div[data-testid="stFormSubmitButton"] > button:hover {
+    .stButton > button:hover, div[data-testid="stFormSubmitButton"] > button:hover, div[data-testid="stDownloadButton"] > button:hover {
         background: linear-gradient(135deg, #334155 0%, #1e293b 100%) !important;
         border-color: #334155 !important;
         box-shadow: 0 4px 14px rgba(15, 23, 42, 0.22) !important;
+    }
+    .stButton > button:hover *, div[data-testid="stFormSubmitButton"] > button:hover *, div[data-testid="stDownloadButton"] > button:hover * {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+    }
+    .stButton > button:disabled,
+    .stButton > button:disabled *,
+    div[data-testid="stFormSubmitButton"] > button:disabled,
+    div[data-testid="stFormSubmitButton"] > button:disabled *,
+    div[data-testid="stDownloadButton"] > button:disabled,
+    div[data-testid="stDownloadButton"] > button:disabled * {
+        background: #e2e8f0 !important;
+        color: #94a3b8 !important;
+        -webkit-text-fill-color: #94a3b8 !important;
+        border-color: #cbd5e1 !important;
+        cursor: not-allowed !important;
+        box-shadow: none !important;
     }
 
     /* Radio buttony i Checkboxy */
@@ -705,14 +755,12 @@ LIGHT_MONO_THEME_CSS = """
         -webkit-text-fill-color: #0f172a !important;
     }
 
-    /* Teksty w kontenerach Markdown i Caption */
-    div[data-testid="stMarkdownContainer"],
-    div[data-testid="stMarkdownContainer"] p,
-    div[data-testid="stMarkdownContainer"] span,
-    div[data-testid="stMarkdownContainer"] div,
-    div[data-testid="stMarkdownContainer"] li {
-        color: #0f172a !important;
-        -webkit-text-fill-color: #0f172a !important;
+    /* Teksty w kontenerach Markdown i Caption (z wykluczeniem przycisków i wskaźników) */
+    div[data-testid="stMarkdownContainer"]:not(button *):not(.bento-card-value),
+    div[data-testid="stMarkdownContainer"]:not(button *):not(.bento-card-value) > p,
+    div[data-testid="stMarkdownContainer"]:not(button *):not(.bento-card-value) > span,
+    div[data-testid="stMarkdownContainer"]:not(button *):not(.bento-card-value) > li {
+        color: #0f172a;
     }
     div[data-testid="stCaptionContainer"],
     div[data-testid="stCaptionContainer"] p,
@@ -721,13 +769,13 @@ LIGHT_MONO_THEME_CSS = """
         -webkit-text-fill-color: #475569 !important;
     }
 
-    /* Tabele stDataFrame w jasnym trybie mono */
+    /* Tabele stDataFrame w jasnym trybie - zachowanie pełnych kolorów wskaźników KDI oraz TAK/NIE */
     div[data-testid="stDataFrame"] canvas[data-testid="data-grid-canvas"],
     div[data-testid="stDataFrame"] canvas {
-        filter: invert(0.92) hue-rotate(180deg) saturate(0) contrast(1.1) !important;
+        filter: invert(0.92) hue-rotate(180deg) contrast(1.05) !important;
     }
     div[data-testid="stDataFrame"] {
-        border: 1px solid #e2e8f0 !important;
+        border: 1px solid #cbd5e1 !important;
         border-radius: 12px !important;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
     }
@@ -742,6 +790,17 @@ LIGHT_MONO_THEME_CSS = """
     }
     hr {
         border-color: #e2e8f0 !important;
+    }
+
+    /* Gwarancja czytelności tekstu przycisków w jasnym motywie */
+    .stButton button,
+    .stButton button *,
+    div[data-testid="stFormSubmitButton"] button,
+    div[data-testid="stFormSubmitButton"] button *,
+    div[data-testid="stDownloadButton"] button,
+    div[data-testid="stDownloadButton"] button * {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
     }
 </style>
 """

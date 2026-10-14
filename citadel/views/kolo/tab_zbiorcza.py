@@ -27,11 +27,11 @@ def render_tab_zbiorcza(dane_przeliczone, nazwa_aktywnego_kola):
         kolor = pobierz_kolor_kdi(wartosc)
         if wartosc == "Brak danych":
             return f"color: {kolor}; font-style: italic;"
-        return f"color: {kolor}; font-weight: 700; text-shadow: 0 0 8px {kolor}40;"
+        return f"color: {kolor}; font-weight: 700;"
 
     def stylizuj_glosowanie(wartosc):
         if wartosc == "TAK":
-            return "color: #10b981; font-weight: 800;"
+            return "color: #22c55e; font-weight: 800;"
         elif wartosc == "NIE":
             return "color: #f43f5e; font-weight: 800;"
         return ""
