@@ -45,6 +45,15 @@ def parse_date(d):
         return d
     return pd.to_datetime(d).date()
 
+def gr_na_pln(gr: int) -> float:
+    return gr / 100.0
+
+def pln_na_gr(pln: float) -> int:
+    return int(round(pln * 100))
+
+def format_pln(gr: int) -> str:
+    return f"{(gr / 100.0):,.2f} zł"
+
 KDI_STOPS = [
     (0.1, (22, 130, 60)),
     (0.5, (74, 222, 128)),

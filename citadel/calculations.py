@@ -58,8 +58,8 @@ def pobierz_stawke_za_miesiac(data_wstapienia_val, data_urodzenia_val, reczny_pa
     - Przed 2025: Stara Uchwała nr 1/2023 (tylko dla członków przyjętych < 2025-01-01)
     - Od 2025: Nowe progi wiekowe (B: 6 zł do 20 lat, M: 9 zł do 30 lat, S: 15 zł od 30 lat)
     """
-    wstapienie = parse_date(data_wstapienia_val)
-    urodziny = parse_date(data_urodzenia_val)
+    wstapienie = data_wstapienia_val if isinstance(data_wstapienia_val, date) and not isinstance(data_wstapienia_val, datetime) else parse_date(data_wstapienia_val)
+    urodziny = data_urodzenia_val if isinstance(data_urodzenia_val, date) and not isinstance(data_urodzenia_val, datetime) else parse_date(data_urodzenia_val)
 
     # 1. EPOKA STAREJ UCHWAŁY (przed 01.01.2025 r.)
     if kursor_msc < GRANICA_STAREJ_UCHWALY and wstapienie < GRANICA_STAREJ_UCHWALY:
@@ -100,6 +100,7 @@ def oblicz_naliczenia_gr(data_wstapienia_val, data_urodzenia_val, reczny_paramet
     Obsługuje zarówno stary stan prawny (< 2025 r.), jak i nowy.
     """
     wstapienie = parse_date(data_wstapienia_val)
+    urodziny = parse_date(data_urodzenia_val)
     punkt = parse_date(punkt_odniesienia)
     odciecie = parse_date(data_odciecia_override) if data_odciecia_override else DATA_ODCIECIA
     poczatek = max(wstapienie, odciecie)
@@ -113,7 +114,7 @@ def oblicz_naliczenia_gr(data_wstapienia_val, data_urodzenia_val, reczny_paramet
         ostatni_dzien_msc = date(kursor.year, kursor.month, last_day)
         
         if ostatni_dzien_msc <= punkt:
-            kod, stawka_gr = pobierz_stawke_za_miesiac(wstapienie, data_urodzenia_val, reczny_parametr, kursor)
+            kod, stawka_gr = pobierz_stawke_za_miesiac(wstapienie, urodziny, reczny_parametr, kursor)
             if kod != "ZWOLNIONY_WSTAPIENIE":
                 suma_gr += stawka_gr
                 licznik += 1
@@ -262,15 +263,15 @@ def _przelicz_finanse_wielu_kol_cached(kolo_ids_tuple, punkt_odniesienia):
         tot_z_gr = 0
         tot_s_gr = 0
 
-        for _, row in czlonkowie_tego_kola.iterrows():
-            cid = row["id"]
+        for row in czlonkowie_tego_kola.itertuples(index=False):
+            cid = row.id
             wpl_gr = int(mapa_wplat_czl.get(cid, 0))
             rec_gr, rec_cnt = mapa_reczne.get(cid, (0, 0))
             kor_gr = int(mapa_korekt_czl.get(cid, 0))
-            s_start_gr = int(row["saldo_startowe_gr"])
+            s_start_gr = int(row.saldo_startowe_gr)
 
-            nal_auto_gr, msc = oblicz_naliczenia_gr(row["data_przystapienia"], row["data_urodzenia"], row["reczny_parametr"], punkt_odniesienia)
-            param_kod, stawka_biezaca_gr = pobierz_parametr(row["data_urodzenia"], row["reczny_parametr"], punkt_odniesienia)
+            nal_auto_gr, msc = oblicz_naliczenia_gr(row.data_przystapienia, row.data_urodzenia, row.reczny_parametr, punkt_odniesienia)
+            param_kod, stawka_biezaca_gr = pobierz_parametr(row.data_urodzenia, row.reczny_parametr, punkt_odniesienia)
 
             nal_tot_gr = nal_auto_gr + rec_gr
             sal_akt_gr = s_start_gr + wpl_gr + kor_gr - nal_tot_gr
@@ -293,11 +294,11 @@ def _przelicz_finanse_wielu_kol_cached(kolo_ids_tuple, punkt_odniesienia):
 
             dane_kolo.append({
                 "id": cid,
-                "imie_nazwisko": row["imie_nazwisko"],
-                "data_ur": row["data_urodzenia"],
-                "data_wst": row["data_przystapienia"],
+                "imie_nazwisko": row.imie_nazwisko,
+                "data_ur": row.data_urodzenia,
+                "data_wst": row.data_przystapienia,
                 "parametr": param_kod,
-                "reczny_parametr": row["reczny_parametr"],
+                "reczny_parametr": row.reczny_parametr,
                 "saldo_start_gr": s_start_gr,
                 "naliczone_gr": nal_tot_gr,
                 "naliczone_auto_gr": nal_auto_gr,

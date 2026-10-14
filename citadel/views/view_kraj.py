@@ -44,9 +44,9 @@ def render_view_kraj(wybrany_kraj_id, mapa_krajow, mapa_regionow, dzis):
         "Wpłaty": 0, "Wydatki": 0, "total_z": 0, "total_s": 0, "uprawnieni": 0
     }
 
-    for _, row in wszystkie_aktywne_kola_kraju.iterrows():
-        k_id = row["id"]
-        r_id = row["region_id"]
+    for row in wszystkie_aktywne_kola_kraju.itertuples(index=False):
+        k_id = row.id
+        r_id = row.region_id
         dane, wplaty_kasa, kasa, wydatki, _, z_gr, s_gr = finanse_hurt_kraj.get(k_id, ([], 0, 0, 0, 0, 0, 0))
         
         kraj_kasa_gr += kasa

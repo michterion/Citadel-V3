@@ -38,9 +38,9 @@ def render_view_region(wybrany_kraj_id, wybrany_region_id, nazwa_wybranego_regio
     reg_uprawnieni_count = 0
     
     tabela_kol = []
-    for _, k_row in kola_w_tym_regionie.iterrows():
-        k_id = k_row["id"]
-        k_nazwa = k_row["nazwa"]
+    for k_row in kola_w_tym_regionie.itertuples(index=False):
+        k_id = k_row.id
+        k_nazwa = k_row.nazwa
         dane, wplaty_kasa, kasa, wydatki, _, z_gr, s_gr = finanse_hurt_reg.get(k_id, ([], 0, 0, 0, 0, 0, 0))
         
         reg_kasa_gr += kasa
