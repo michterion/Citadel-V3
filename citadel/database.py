@@ -544,34 +544,42 @@ def przywroc_region_z_kosza(region_id: int):
         conn.commit()
     st.cache_data.clear()
 
+def _usun_kolo_trwale_w_transakcji(cur, kolo_id: int):
+    cur.execute("DELETE FROM wplaty WHERE kolo_id = %s OR czlonek_id IN (SELECT id FROM czlonkowie WHERE kolo_id = %s)", (kolo_id, kolo_id))
+    cur.execute("DELETE FROM wplaty_oczekujace WHERE kolo_id = %s", (kolo_id,))
+    cur.execute("DELETE FROM naliczenia_reczne WHERE czlonek_id IN (SELECT id FROM czlonkowie WHERE kolo_id = %s)", (kolo_id,))
+    cur.execute("DELETE FROM korekty WHERE czlonek_id IN (SELECT id FROM czlonkowie WHERE kolo_id = %s)", (kolo_id,))
+    cur.execute("DELETE FROM czlonkowie WHERE kolo_id = %s", (kolo_id,))
+    cur.execute("DELETE FROM wydatki WHERE kolo_id = %s", (kolo_id,))
+    cur.execute("DELETE FROM korekty_kasy WHERE kolo_id = %s", (kolo_id,))
+    cur.execute("DELETE FROM kola WHERE id = %s", (kolo_id,))
+
 def usun_kolo_trwale(kolo_id: int):
-    is_del = db_scalar("SELECT is_deleted FROM kola WHERE id = %s", (kolo_id,))
-    if is_del is not True:
-        raise ValueError("Nie można trwale usunąć aktywnego koła! Przenieś je najpierw do kosza.")
-        
     with pool.connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM wplaty WHERE kolo_id = %s OR czlonek_id IN (SELECT id FROM czlonkowie WHERE kolo_id = %s)", (kolo_id, kolo_id))
-            cur.execute("DELETE FROM wplaty_oczekujace WHERE kolo_id = %s", (kolo_id,))
-            cur.execute("DELETE FROM naliczenia_reczne WHERE czlonek_id IN (SELECT id FROM czlonkowie WHERE kolo_id = %s)", (kolo_id,))
-            cur.execute("DELETE FROM korekty WHERE czlonek_id IN (SELECT id FROM czlonkowie WHERE kolo_id = %s)", (kolo_id,))
-            cur.execute("DELETE FROM czlonkowie WHERE kolo_id = %s", (kolo_id,))
-            cur.execute("DELETE FROM wydatki WHERE kolo_id = %s", (kolo_id,))
-            cur.execute("DELETE FROM korekty_kasy WHERE kolo_id = %s", (kolo_id,))
-            cur.execute("DELETE FROM kola WHERE id = %s", (kolo_id,))
+            cur.execute("SELECT is_deleted FROM kola WHERE id = %s", (kolo_id,))
+            row = cur.fetchone()
+            if not row or not row[0]:
+                raise ValueError("Nie można trwale usunąć aktywnego koła! Przenieś je najpierw do kosza.")
+            _usun_kolo_trwale_w_transakcji(cur, kolo_id)
         conn.commit()
     st.cache_data.clear()
 
 def usun_region_trwale(region_id: int):
-    is_del = db_scalar("SELECT is_deleted FROM regiony WHERE id = %s", (region_id,))
-    if is_del is not True:
-        raise ValueError("Nie można trwale usunąć aktywnego regionu! Przenieś go najpierw do kosza.")
+    with pool.connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT is_deleted FROM regiony WHERE id = %s", (region_id,))
+            row = cur.fetchone()
+            if not row or not row[0]:
+                raise ValueError("Nie można trwale usunąć aktywnego regionu! Przenieś go najpierw do kosza.")
 
-    kolo_ids = db_query("SELECT id FROM kola WHERE region_id = %s", (region_id,))["id"].tolist()
-    for k_id in kolo_ids:
-        usun_kolo_trwale(k_id)
+            cur.execute("SELECT id FROM kola WHERE region_id = %s", (region_id,))
+            kolo_ids = [r[0] for r in cur.fetchall()]
+            for k_id in kolo_ids:
+                _usun_kolo_trwale_w_transakcji(cur, k_id)
 
-    db_execute("DELETE FROM regiony WHERE id = %s", (region_id,))
+            cur.execute("DELETE FROM regiony WHERE id = %s", (region_id,))
+        conn.commit()
     st.cache_data.clear()
 
 def format_val_sql(v):
