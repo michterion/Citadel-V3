@@ -8,35 +8,116 @@ PLOTLY_CONFIG = {
 
 def render_wykres_salda(punkty_x, punkty_saldo):
     """
-    Nowoczesny wykres osi czasu salda z gradientowym wypełnieniem (area chart)
-    i czystą typografią.
+    Wykres osi czasu salda:
+    - Bez pojedynczych markerów/punktów (gładka linia spline).
+    - Dynamiczne kolorowanie (zielony: dodatnie, biały: neutralne, czerwony: ujemne).
+    - Wielowarstwowa neonowa poświata linii.
+    - Półprzezroczyste wypełnienie znajdujące się ZAWSZE POD wykresem (tonexty do dolnej krawędzi).
     """
     fig = go.Figure()
 
-    is_compact = len(punkty_x) <= 35
-    mode = 'lines+markers' if is_compact else 'lines'
+    if not punkty_saldo or not punkty_x:
+        return fig
+
+    # Określenie statusu salda (bieżące/końcowe saldo na osi)
+    ostatnie_saldo = punkty_saldo[-1]
+    if ostatnie_saldo > 0.001:
+        # Dodatnie: Szmaragdowy / Neon Green
+        kolor_glowny = '#22c55e'
+        kolor_poswiaty_mid = 'rgba(34, 197, 94, 0.40)'
+        kolor_poswiaty_outer = 'rgba(34, 197, 94, 0.16)'
+        kolor_wypelnienia = 'rgba(34, 197, 94, 0.08)'
+        kolor_akcentu = '#22c55e'
+    elif ostatnie_saldo < -0.001:
+        # Ujemne: Koralowy / Neon Red
+        kolor_glowny = '#ef4444'
+        kolor_poswiaty_mid = 'rgba(239, 68, 68, 0.40)'
+        kolor_poswiaty_outer = 'rgba(239, 68, 68, 0.16)'
+        kolor_wypelnienia = 'rgba(239, 68, 68, 0.08)'
+        kolor_akcentu = '#ef4444'
+    else:
+        # Neutralne: Czysta biel
+        kolor_glowny = '#ffffff'
+        kolor_poswiaty_mid = 'rgba(255, 255, 255, 0.35)'
+        kolor_poswiaty_outer = 'rgba(255, 255, 255, 0.14)'
+        kolor_wypelnienia = 'rgba(255, 255, 255, 0.06)'
+        kolor_akcentu = '#ffffff'
+
+    # Obliczenie granic osi Y, tak by wypełnienie było zawsze pod krzywą
+    min_saldo = min(punkty_saldo)
+    max_saldo = max(punkty_saldo)
+    rozstep = max_saldo - min_saldo
+    margines = max(rozstep * 0.15, 30.0)
+
+    y_dol = min(min_saldo, 0.0) - margines
+    y_gora = max(max_saldo, 0.0) + margines
+
+    # 1. Niewidoczna linia bazowa na samym dole wykresu (podstawa do wypełnienia pod wykresem)
+    fig.add_trace(go.Scatter(
+        x=punkty_x,
+        y=[y_dol] * len(punkty_x),
+        mode='lines',
+        line=dict(width=0, color='rgba(0,0,0,0)'),
+        hoverinfo='skip',
+        showlegend=False
+    ))
+
+    # 2. Półprzezroczyste wypełnienie pod wykresem (od krzywej w dół do linii bazowej)
+    fig.add_trace(go.Scatter(
+        x=punkty_x,
+        y=punkty_saldo,
+        mode='lines',
+        line=dict(width=0, color='rgba(0,0,0,0)', shape='spline'),
+        fill='tonexty',
+        fillcolor=kolor_wypelnienia,
+        hoverinfo='skip',
+        showlegend=False
+    ))
+
+    # 3. Zewnętrzna szeroka poświata neonowa
+    fig.add_trace(go.Scatter(
+        x=punkty_x,
+        y=punkty_saldo,
+        mode='lines',
+        line=dict(color=kolor_poswiaty_outer, width=8, shape='spline'),
+        hoverinfo='skip',
+        showlegend=False
+    ))
+
+    # 4. Środkowa poświata neonowa
+    fig.add_trace(go.Scatter(
+        x=punkty_x,
+        y=punkty_saldo,
+        mode='lines',
+        line=dict(color=kolor_poswiaty_mid, width=4.5, shape='spline'),
+        hoverinfo='skip',
+        showlegend=False
+    ))
+
+    # 5. Ostra linia główna (bez markerów - chyba że jest dokładnie 1 punkt)
+    is_single_point = len(punkty_saldo) == 1
+    mode_glowny = 'markers' if is_single_point else 'lines'
+    marker_dict = dict(size=8, color=kolor_glowny, line=dict(color='#ffffff', width=2)) if is_single_point else None
 
     fig.add_trace(go.Scatter(
         x=punkty_x,
         y=punkty_saldo,
-        mode=mode,
+        mode=mode_glowny,
         name='Saldo',
-        line=dict(color='#a855f7', width=2.5, shape='spline'),
-        fill='tozeroy',
-        fillcolor='rgba(168, 85, 247, 0.12)',
-        marker=dict(size=6, color='#c084fc', line=dict(color='#ffffff', width=1.5)) if is_compact else None,
+        line=dict(color=kolor_glowny, width=2.2, shape='spline'),
+        marker=marker_dict,
         hovertemplate='Data: %{x}<br><b>Saldo: %{y:,.2f} zł</b><extra></extra>'
     ))
 
-    # Pozioma linia równowagi 0.00 zł
+    # Linia równowagi 0.00 zł
     fig.add_hline(
         y=0,
-        line_dash="solid",
-        line_color="rgba(255, 255, 255, 0.7)",
-        line_width=1.5,
+        line_dash="dot",
+        line_color="rgba(255, 255, 255, 0.4)",
+        line_width=1.2,
         annotation_text="0.00 zł (Równowaga)",
         annotation_position="top left",
-        annotation_font=dict(color="#ffffff", size=10, family="Inter, sans-serif")
+        annotation_font=dict(color="rgba(255, 255, 255, 0.75)", size=10, family="Inter, sans-serif")
     )
 
     fig.update_layout(
@@ -52,7 +133,7 @@ def render_wykres_salda(punkty_x, punkty_saldo):
             showspikes=True,
             spikethickness=1,
             spikedash='dot',
-            spikecolor='#818cf8',
+            spikecolor=kolor_akcentu,
             spikemode='across'
         ),
         yaxis=dict(
@@ -61,12 +142,13 @@ def render_wykres_salda(punkty_x, punkty_saldo):
             color='#94a3b8',
             ticksuffix=' zł',
             tickformat=',.2f',
+            range=[y_dol, y_gora],
             tickfont=dict(size=11, family='Inter, sans-serif')
         ),
         hovermode="x unified",
         hoverlabel=dict(
             bgcolor='#191430',
-            bordercolor='#a855f7',
+            bordercolor=kolor_akcentu,
             font=dict(color='#ffffff', family='Inter, sans-serif', size=12)
         )
     )
@@ -74,8 +156,10 @@ def render_wykres_salda(punkty_x, punkty_saldo):
 
 def render_wykres_kdi(punkty_x, punkty_kdi):
     """
-    Wykres dynamiki wskaźnika KDI z kolorystycznymi strefami decyzyjnymi
-    (zielona: wzorowa, żółta: dopuszczalna, czerwona: karencja).
+    Wykres dynamiki wskaźnika KDI:
+    - Bez punktów (gładka linia neonowa).
+    - Neonowa poświata linii (błękit cyan).
+    - Kolorystyczne strefy decyzyjne w tle (zielona, żółta, czerwona).
     """
     valid_kdi = [v for v in punkty_kdi if v is not None]
     max_kdi = max(valid_kdi) if valid_kdi else 2.0
@@ -108,18 +192,40 @@ def render_wykres_kdi(punkty_x, punkty_kdi):
         annotation_font=dict(color="#facc15", size=10, family="Inter, sans-serif")
     )
 
-    is_compact = len(punkty_x) <= 35
-    mode = 'lines+markers' if is_compact else 'lines'
+    # Zewnętrzna poświata neonowa (błękit)
+    fig.add_trace(go.Scatter(
+        x=punkty_x,
+        y=punkty_kdi,
+        mode='lines',
+        line=dict(color='rgba(56, 189, 248, 0.16)', width=8, shape='spline'),
+        connectgaps=False,
+        hoverinfo='skip',
+        showlegend=False
+    ))
 
-    kolory_markerow = [pobierz_kolor_kdi(v) for v in punkty_kdi] if is_compact else None
+    # Środkowa poświata neonowa
+    fig.add_trace(go.Scatter(
+        x=punkty_x,
+        y=punkty_kdi,
+        mode='lines',
+        line=dict(color='rgba(56, 189, 248, 0.38)', width=4.5, shape='spline'),
+        connectgaps=False,
+        hoverinfo='skip',
+        showlegend=False
+    ))
+
+    # Główna ostra linia neonowa (bez markerów/punktów)
+    is_single_point = len(punkty_kdi) == 1
+    mode_glowny = 'markers' if is_single_point else 'lines'
+    marker_dict = dict(size=8, color='#38bdf8', line=dict(color='#ffffff', width=2)) if is_single_point else None
 
     fig.add_trace(go.Scatter(
         x=punkty_x,
         y=punkty_kdi,
-        mode=mode,
+        mode=mode_glowny,
         name='KDI',
-        line=dict(color='#38bdf8', width=2.5, shape='spline'),
-        marker=dict(size=7, color=kolory_markerow, line=dict(color='#ffffff', width=1.5)) if is_compact else None,
+        line=dict(color='#38bdf8', width=2.2, shape='spline'),
+        marker=marker_dict,
         connectgaps=False,
         hovertemplate='Data: %{x}<br><b>KDI: %{y:.2f}</b><extra></extra>'
     ))
