@@ -21,7 +21,8 @@ from database import (
 from rbac import moze, pobierz_etykiete_roli, generuj_sol, hashuj_haslo
 from calculations import (
     przelicz_finanse_dla_kola, pobierz_parametr, oblicz_naliczenia_gr,
-    oblicz_symulacje_kalkulatora, waliduj_daty_czlonka, filtruj_interwal
+    oblicz_symulacje_kalkulatora, waliduj_daty_czlonka, filtruj_interwal,
+    pobierz_stawke_za_miesiac
 )
 from components.ui import render_bento_card
 from components.charts import render_wykres_salda, render_wykres_kdi
@@ -189,21 +190,39 @@ def render_view_kolo(zalogowany_uzytkownik, wybrany_kraj_id, wybrany_region_id, 
             hist_naliczenia_reczne = db_query("SELECT id, kwota_gr, data_naliczenia, tytul FROM naliczenia_reczne WHERE czlonek_id = %s ORDER BY data_naliczenia ASC", (wybrany_id,))
             hist_korekty = db_query("SELECT id, delta_gr, docelowe_saldo_gr, data_korekty, powod FROM korekty WHERE czlonek_id = %s ORDER BY data_korekty ASC", (wybrany_id,))
 
-            wplaty_map = {parse_date(r["data_wplaty"]): int(r["kwota_gr"]) for _, r in hist_wplaty.iterrows()}
-            reczne_nal_map = {parse_date(r["data_naliczenia"]): int(r["kwota_gr"]) for _, r in hist_naliczenia_reczne.iterrows()}
+            data_wst_parsed = parse_date(osoba["data_wst"])
+            data_ur_parsed = parse_date(osoba["data_ur"])
+            reczny_param = osoba["reczny_parametr"]
+
+            wplaty_map = {}
+            for _, r in hist_wplaty.iterrows():
+                d = parse_date(r["data_wplaty"])
+                wplaty_map[d] = wplaty_map.get(d, 0) + int(r["kwota_gr"])
+
+            reczne_nal_map = {}
+            for _, r in hist_naliczenia_reczne.iterrows():
+                d = parse_date(r["data_naliczenia"])
+                reczne_nal_map[d] = reczne_nal_map.get(d, 0) + int(r["kwota_gr"])
+
             korekty_map = {}
             for _, r in hist_korekty.iterrows():
-                korekty_map.setdefault(parse_date(r["data_korekty"]), []).append(int(r["delta_gr"]))
+                d = parse_date(r["data_korekty"])
+                korekty_map[d] = korekty_map.get(d, 0) + int(r["delta_gr"])
 
-            start_date = max(parse_date(osoba["data_wst"]), DATA_ODCIECIA)
+            start_date = max(data_wst_parsed, DATA_ODCIECIA)
             if start_date > dzis:
                 start_date = dzis
 
+            # Inicjalizacja sum skumulowanych przed start_date (dla zachowania spójności)
+            running_wplaty_gr = sum(kw for d, kw in wplaty_map.items() if d < start_date)
+            running_reczne_nal_gr = sum(kw for d, kw in reczne_nal_map.items() if d < start_date)
+            running_kor_netto_gr = sum(kw for d, kw in korekty_map.items() if d < start_date)
+
+            # Bazowe naliczenie automatyczne na start_date
+            running_nal_auto_gr, _ = oblicz_naliczenia_gr(data_wst_parsed, data_ur_parsed, reczny_param, start_date)
+
             daily_records = []
             cur_date = start_date
-            running_wplaty_gr = 0
-            running_reczne_nal_gr = 0
-            running_kor_netto_gr = 0
 
             while cur_date <= dzis:
                 if cur_date in wplaty_map:
@@ -211,12 +230,19 @@ def render_view_kolo(zalogowany_uzytkownik, wybrany_kraj_id, wybrany_region_id, 
                 if cur_date in reczne_nal_map:
                     running_reczne_nal_gr += reczne_nal_map[cur_date]
                 if cur_date in korekty_map:
-                    for dlt in korekty_map[cur_date]:
-                        running_kor_netto_gr += dlt
+                    running_kor_netto_gr += korekty_map[cur_date]
 
-                nal_auto_gr, _ = oblicz_naliczenia_gr(osoba["data_wst"], osoba["data_ur"], osoba["reczny_parametr"], cur_date)
-                nal_total_pt = nal_auto_gr + running_reczne_nal_gr
-                
+                # Naliczenie statutowe wzrasta w ostatnim dniu miesiąca (inkrementalnie O(1) zamiast pętli wstecznej)
+                if cur_date > start_date:
+                    _, last_day = calendar.monthrange(cur_date.year, cur_date.month)
+                    if cur_date.day == last_day:
+                        kod_st, stawka_gr = pobierz_stawke_za_miesiac(
+                            data_wst_parsed, data_ur_parsed, reczny_param, date(cur_date.year, cur_date.month, 1)
+                        )
+                        if kod_st != "ZWOLNIONY_WSTAPIENIE":
+                            running_nal_auto_gr += stawka_gr
+
+                nal_total_pt = running_nal_auto_gr + running_reczne_nal_gr
                 saldo_pt_gr = osoba["saldo_start_gr"] + running_wplaty_gr + running_kor_netto_gr - nal_total_pt
                 saldo_pt = saldo_pt_gr / 100.0
 
