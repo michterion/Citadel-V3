@@ -38,3 +38,4 @@ def render_tab_zbiorcza(dane_przeliczone, nazwa_aktywnego_kola):
 
     styler = df_wyswietl.style.map(stylizuj_kdi_komorke, subset=["Wskaźnik KDI"]).map(stylizuj_glosowanie, subset=["Możliwość głosowania"])
     st.dataframe(styler, width="stretch", hide_index=True)
+

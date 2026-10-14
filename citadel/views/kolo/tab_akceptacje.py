@@ -60,3 +60,4 @@ def render_tab_akceptacje(curr_user_id):
                         st.warning("Wpłata odrzucona.")
                         st.rerun()
             st.divider()
+

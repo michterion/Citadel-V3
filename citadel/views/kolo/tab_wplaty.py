@@ -172,3 +172,4 @@ def render_tab_wplaty(dane_przeliczone, wybrane_kolo_id, rola_uzytkownika, curr_
         else:
             st.caption("Brak zgłoszonych oczekujących wpłat.")
     st.markdown("</div>", unsafe_allow_html=True)
+

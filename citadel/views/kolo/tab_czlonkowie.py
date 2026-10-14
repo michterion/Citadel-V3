@@ -91,3 +91,4 @@ def render_tab_czlonkowie(dane_przeliczone, wybrane_kolo_id, rola_uzytkownika):
                     st.success("Profil usunięty.")
                     st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
+

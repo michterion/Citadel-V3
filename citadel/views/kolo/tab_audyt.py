@@ -50,3 +50,4 @@ def render_tab_audyt(wybrane_kolo_id):
         if "backup_filepath" in st.session_state and os.path.exists(st.session_state["backup_filepath"]):
             with open(st.session_state["backup_filepath"], "rb") as f_dl:
                 st.download_button("📥 Pobierz plik bazy (.sql)", data=f_dl.read(), file_name=st.session_state["backup_filename"], mime="application/sql")
+

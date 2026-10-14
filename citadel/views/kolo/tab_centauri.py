@@ -195,3 +195,4 @@ def render_tab_centauri(curr_user_id, wybrany_kraj_id):
                 except (psycopg.IntegrityError, errors.UniqueViolation):
                     st.error("Użytkownik o takim loginie już istnieje.")
         st.markdown("</div>", unsafe_allow_html=True)
+

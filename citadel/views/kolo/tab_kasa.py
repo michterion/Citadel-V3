@@ -94,3 +94,4 @@ def render_tab_kasa(wybrane_kolo_id, nazwa_aktywnego_kola, suma_wplat_kola_gr, f
             st.dataframe(korekty_kasy_df, width="stretch", hide_index=True)
         else:
             st.caption("Brak ręcznych korekt stanu kasy.")
+

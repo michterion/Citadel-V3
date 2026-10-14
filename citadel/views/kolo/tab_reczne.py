@@ -46,3 +46,4 @@ def render_tab_reczne(dane_przeliczone, wybrane_kolo_id):
                     st.success("Naliczenie usunięte.")
                     st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
+

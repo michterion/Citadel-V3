@@ -139,3 +139,4 @@ def render_tab_profile(dane_przeliczone, dzis):
             st.dataframe(hk[["data_korekty", "Delta", "Docelowe", "powod"]], width="stretch", hide_index=True)
         else:
             st.caption("Brak korekt.")
+

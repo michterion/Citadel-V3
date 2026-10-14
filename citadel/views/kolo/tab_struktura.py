@@ -24,3 +24,4 @@ def render_tab_struktura(wybrany_kraj_id, wybrany_region_id):
                     st.cache_data.clear()
                     st.success("Koło utworzone.")
                     st.rerun()
+

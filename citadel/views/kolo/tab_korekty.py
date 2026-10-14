@@ -30,3 +30,4 @@ def render_tab_korekty(dane_przeliczone, wybrane_kolo_id):
                 st.success(f"Zaktualizowano saldo o deltę: {delta_gr/100:+.2f} zł.")
                 st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
+

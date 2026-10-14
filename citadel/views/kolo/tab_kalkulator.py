@@ -192,3 +192,4 @@ def render_tab_kalkulator(dzis):
             st.write(f"• Nowe saldo po dopłacie: **{sym_nowe_saldo:+.2f} zł**")
             st.write(f"• Nowe zadłużenie: **{sym_nowe_msc_dlugu:.1f} miesięcy**")
             st.write(f"• Status głosu: **{'✅ UPRAWNIONY' if sym_glos else '❌ NADAL BEZ PRAWA GŁOSU'}**")
+
