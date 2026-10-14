@@ -168,7 +168,7 @@ def render_view_kolo(zalogowany_uzytkownik, wybrany_kraj_id, wybrany_region_id, 
     # 10. ZARZĄDZANIE STRUKTURĄ
     if "🏛️ Zarządzaj Strukturą" in tab_map:
         with tab_map["🏛️ Zarządzaj Strukturą"]:
-            render_tab_struktura(wybrany_kraj_id, wybrany_region_id)
+            render_tab_struktura(wybrany_kraj_id, wybrany_region_id, rola_uzytkownika)
 
     # 11. LOGI AUDYTOWE
     if "📜 Logi Audytowe" in tab_map:
