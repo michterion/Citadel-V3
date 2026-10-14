@@ -158,54 +158,37 @@ def render_wykres_kdi(punkty_x, punkty_kdi):
     """
     Wykres dynamiki wskaźnika KDI:
     - Bez punktów (gładka linia neonowa).
-    - Neonowa poświata linii (błękit cyan).
-    - Kolorystyczne strefy decyzyjne w tle (zielona, żółta, czerwona).
+    - Czyste tło bez prostokątów i bez linii adnotacyjnych.
+    - Dynamiczne kolorowanie wg KDI: zielony (<= 1.0), żółty (1.0-1.2), czerwony (> 1.2), biały (brak).
     """
     valid_kdi = [v for v in punkty_kdi if v is not None]
     max_kdi = max(valid_kdi) if valid_kdi else 2.0
     y_max = max(max_kdi + 0.35, 1.8)
 
-    # Dynamiczne kolorowanie KDI spójne ze słownikiem barw KDI_STOPS
-    ostatnie_kdi = valid_kdi[-1] if valid_kdi else 1.0
-    kolor_kdi = pobierz_kolor_kdi(ostatnie_kdi)
+    # Dynamiczne kolorowanie KDI:
+    # <= 1.00: Zielony neon (wzorowy / pełne opłacenie)
+    # 1.00 - 1.20: Żółty neon (w normie / granica karencji)
+    # > 1.20: Czerwony neon (przekroczona norma / utrata prawa głosu)
+    # None: Biały
+    ostatnie_kdi = valid_kdi[-1] if valid_kdi else None
+    if ostatnie_kdi is None:
+        kolor_kdi = '#ffffff'
+        r, g, b = 255, 255, 255
+    elif ostatnie_kdi <= 1.00:
+        kolor_kdi = '#22c55e'
+        r, g, b = 34, 197, 94
+    elif ostatnie_kdi <= 1.20:
+        kolor_kdi = '#facc15'
+        r, g, b = 250, 204, 21
+    else:
+        kolor_kdi = '#ef4444'
+        r, g, b = 239, 68, 68
 
-    def hex_to_rgb(hex_c: str):
-        c = hex_c.lstrip('#')
-        if len(c) == 6:
-            return tuple(int(c[i:i+2], 16) for i in (0, 2, 4))
-        return (56, 189, 248)
-
-    r, g, b = hex_to_rgb(kolor_kdi)
     kolor_poswiaty_mid = f'rgba({r}, {g}, {b}, 0.38)'
     kolor_poswiaty_outer = f'rgba({r}, {g}, {b}, 0.16)'
     kolor_wypelnienia = f'rgba({r}, {g}, {b}, 0.08)'
 
     fig = go.Figure()
-
-    # Subtelne strefy decyzyjne w tle
-    fig.add_hrect(y0=0.0, y1=1.0, fillcolor='rgba(16, 185, 129, 0.05)', line_width=0, layer="below")
-    fig.add_hrect(y0=1.0, y1=1.2, fillcolor='rgba(250, 204, 21, 0.05)', line_width=0, layer="below")
-    fig.add_hrect(y0=1.2, y1=y_max + 1.0, fillcolor='rgba(239, 68, 68, 0.05)', line_width=0, layer="below")
-
-    # Poziome linie graniczne
-    fig.add_hline(
-        y=1.0,
-        line_dash="dot",
-        line_color="#10b981",
-        line_width=1.5,
-        annotation_text="1.00 (Cel statutowy)",
-        annotation_position="bottom left",
-        annotation_font=dict(color="#10b981", size=10, family="Inter, sans-serif")
-    )
-    fig.add_hline(
-        y=1.2,
-        line_dash="dash",
-        line_color="#facc15",
-        line_width=1.5,
-        annotation_text="1.20 (Granica prawa głosu)",
-        annotation_position="top left",
-        annotation_font=dict(color="#facc15", size=10, family="Inter, sans-serif")
-    )
 
     # 1. Niewidoczna linia bazowa na dole wykresu (y=0) dla wypełnienia
     fig.add_trace(go.Scatter(
