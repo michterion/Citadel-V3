@@ -14,10 +14,30 @@ from views.view_kolo import render_view_kolo
 pd.set_option('future.no_silent_downcasting', True)
 st.set_page_config(page_title="Citadel for NG", layout="wide", initial_sidebar_state="collapsed")
 
-if "tryb_mono" not in st.session_state:
-    st.session_state["tryb_mono"] = False
+CYKL_MOTYWOW = ["fiolet", "dark_mono", "light_mono"]
+ETYKIETY_MOTYWOW = {
+    "fiolet": "💜 Fiolet",
+    "dark_mono": "🖤 Ciemny",
+    "light_mono": "🤍 Jasny"
+}
 
-st.markdown(pobierz_motyw_css(st.session_state["tryb_mono"]), unsafe_allow_html=True)
+if "motyw" not in st.session_state:
+    if st.session_state.get("tryb_mono", False):
+        st.session_state["motyw"] = "dark_mono"
+    else:
+        st.session_state["motyw"] = "fiolet"
+
+def przelacz_kolejny_motyw():
+    akt = st.session_state.get("motyw", "fiolet")
+    try:
+        idx = CYKL_MOTYWOW.index(akt)
+        nowy = CYKL_MOTYWOW[(idx + 1) % len(CYKL_MOTYWOW)]
+    except ValueError:
+        nowy = "fiolet"
+    st.session_state["motyw"] = nowy
+    st.session_state["tryb_mono"] = (nowy != "fiolet")
+
+st.markdown(pobierz_motyw_css(st.session_state["motyw"]), unsafe_allow_html=True)
 
 # Inicjalizacja schematu bazy danych i triggerów
 init_db_once()
@@ -58,7 +78,13 @@ if st.session_state["auth_user"] is None:
                         st.rerun()
                     else:
                         st.error("Nieprawidłowy login lub hasło.")
-        st.toggle("🖤 Styl monochromatyczny", key="tryb_mono")
+        st.button(
+            f"Motyw: {ETYKIETY_MOTYWOW.get(st.session_state['motyw'], '💜 Fiolet')}",
+            on_click=przelacz_kolejny_motyw,
+            key="btn_cykl_login",
+            use_container_width=True,
+            help="Kliknij, aby przełączyć motyw (Fiolet / Ciemny Mono / Jasny Mono)"
+        )
     st.stop()
 
 # CIĄGŁA WERYFIKACJA SESJI I WERSJI SESJI
@@ -182,7 +208,13 @@ with col_h5:
             st.session_state["auth_user"] = None
             st.rerun()
     with c_tog:
-        st.toggle("🖤 Mono", key="tryb_mono")
+        st.button(
+            ETYKIETY_MOTYWOW.get(st.session_state["motyw"], "💜 Fiolet"),
+            on_click=przelacz_kolejny_motyw,
+            key="btn_cykl_nav",
+            use_container_width=True,
+            help="Kliknij, aby przełączyć motyw: 💜 Fiolet ➔ 🖤 Ciemny Mono ➔ 🤍 Jasny Mono"
+        )
 
 # Powiadomienie o oczekujących wpłatach
 if moze(rola_uzytkownika, "akceptuje_wplaty"):

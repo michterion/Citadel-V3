@@ -1,3 +1,4 @@
+import streamlit as st
 import plotly.graph_objects as go
 from config import pobierz_kolor_kdi
 
@@ -5,6 +6,12 @@ PLOTLY_CONFIG = {
     'displayModeBar': False,
     'responsive': True
 }
+
+def czy_jasny_motyw() -> bool:
+    try:
+        return st.session_state.get("motyw") == "light_mono"
+    except Exception:
+        return False
 
 def render_wykres_salda(punkty_x, punkty_saldo):
     """
@@ -18,6 +25,8 @@ def render_wykres_salda(punkty_x, punkty_saldo):
 
     if not punkty_saldo or not punkty_x:
         return fig
+
+    is_light = czy_jasny_motyw()
 
     # Określenie statusu salda (bieżące/końcowe saldo na osi)
     ostatnie_saldo = punkty_saldo[-1]
@@ -36,12 +45,12 @@ def render_wykres_salda(punkty_x, punkty_saldo):
         kolor_wypelnienia = 'rgba(239, 68, 68, 0.08)'
         kolor_akcentu = '#ef4444'
     else:
-        # Neutralne: Czysta biel
-        kolor_glowny = '#ffffff'
-        kolor_poswiaty_mid = 'rgba(255, 255, 255, 0.35)'
-        kolor_poswiaty_outer = 'rgba(255, 255, 255, 0.14)'
-        kolor_wypelnienia = 'rgba(255, 255, 255, 0.06)'
-        kolor_akcentu = '#ffffff'
+        # Neutralne: Czysta biel w trybach ciemnych, antracyt w jasnym
+        kolor_glowny = '#0f172a' if is_light else '#ffffff'
+        kolor_poswiaty_mid = 'rgba(15, 23, 42, 0.25)' if is_light else 'rgba(255, 255, 255, 0.35)'
+        kolor_poswiaty_outer = 'rgba(15, 23, 42, 0.10)' if is_light else 'rgba(255, 255, 255, 0.14)'
+        kolor_wypelnienia = 'rgba(15, 23, 42, 0.05)' if is_light else 'rgba(255, 255, 255, 0.06)'
+        kolor_akcentu = '#0f172a' if is_light else '#ffffff'
 
     # Obliczenie granic osi Y, tak by wypełnienie było zawsze pod krzywą
     min_saldo = min(punkty_saldo)
@@ -113,22 +122,22 @@ def render_wykres_salda(punkty_x, punkty_saldo):
     fig.add_hline(
         y=0,
         line_dash="dot",
-        line_color="rgba(255, 255, 255, 0.4)",
+        line_color="rgba(15, 23, 42, 0.35)" if is_light else "rgba(255, 255, 255, 0.4)",
         line_width=1.2,
         annotation_text="0.00 zł (Równowaga)",
         annotation_position="top left",
-        annotation_font=dict(color="rgba(255, 255, 255, 0.75)", size=10, family="Inter, sans-serif")
+        annotation_font=dict(color="#475569" if is_light else "rgba(255, 255, 255, 0.75)", size=10, family="Inter, sans-serif")
     )
 
     fig.update_layout(
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(family='Inter, sans-serif'),
+        font=dict(family='Inter, sans-serif', color='#0f172a' if is_light else '#f1f5f9'),
         margin=dict(l=20, r=20, t=30, b=25),
         height=360,
         xaxis=dict(
             showgrid=False,
-            color='#94a3b8',
+            color='#64748b' if is_light else '#94a3b8',
             tickfont=dict(size=11, family='Inter, sans-serif'),
             showspikes=True,
             spikethickness=1,
@@ -138,8 +147,8 @@ def render_wykres_salda(punkty_x, punkty_saldo):
         ),
         yaxis=dict(
             showgrid=True,
-            gridcolor='rgba(255, 255, 255, 0.06)',
-            color='#94a3b8',
+            gridcolor='rgba(0, 0, 0, 0.08)' if is_light else 'rgba(255, 255, 255, 0.06)',
+            color='#64748b' if is_light else '#94a3b8',
             ticksuffix=' zł',
             tickformat=',.2f',
             range=[y_dol, y_gora],
@@ -147,9 +156,9 @@ def render_wykres_salda(punkty_x, punkty_saldo):
         ),
         hovermode="x unified",
         hoverlabel=dict(
-            bgcolor='#1c1c20',
+            bgcolor='#ffffff' if is_light else '#1c1c20',
             bordercolor=kolor_akcentu,
-            font=dict(color='#ffffff', family='Inter, sans-serif', size=12)
+            font=dict(color='#0f172a' if is_light else '#ffffff', family='Inter, sans-serif', size=12)
         )
     )
     return fig
@@ -259,15 +268,17 @@ def render_wykres_kdi(punkty_x, punkty_kdi, kdi_val=None):
         hovertemplate='Data: %{x}<br><b>KDI: %{y:.2f}</b><extra></extra>'
     ))
 
+    is_light = czy_jasny_motyw()
+
     fig.update_layout(
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(family='Inter, sans-serif'),
+        font=dict(family='Inter, sans-serif', color='#0f172a' if is_light else '#f1f5f9'),
         margin=dict(l=20, r=20, t=30, b=25),
         height=360,
         xaxis=dict(
             showgrid=False,
-            color='#94a3b8',
+            color='#64748b' if is_light else '#94a3b8',
             tickfont=dict(size=11, family='Inter, sans-serif'),
             showspikes=True,
             spikethickness=1,
@@ -277,17 +288,17 @@ def render_wykres_kdi(punkty_x, punkty_kdi, kdi_val=None):
         ),
         yaxis=dict(
             showgrid=True,
-            gridcolor='rgba(255, 255, 255, 0.06)',
-            color='#94a3b8',
+            gridcolor='rgba(0, 0, 0, 0.08)' if is_light else 'rgba(255, 255, 255, 0.06)',
+            color='#64748b' if is_light else '#94a3b8',
             range=[y_dol, y_gora],
             tickformat='.2f',
             tickfont=dict(size=11, family='Inter, sans-serif')
         ),
         hovermode="x unified",
         hoverlabel=dict(
-            bgcolor='#1c1c20',
+            bgcolor='#ffffff' if is_light else '#1c1c20',
             bordercolor=kolor_kdi,
-            font=dict(color='#ffffff', family='Inter, sans-serif', size=12)
+            font=dict(color='#0f172a' if is_light else '#ffffff', family='Inter, sans-serif', size=12)
         )
     )
     return fig
@@ -304,6 +315,8 @@ def render_wykres_slupkowy_kdi(elementy, tytul_x="Wskaźnik KDI"):
     if not prawidlowe:
         return None
 
+    is_light = czy_jasny_motyw()
+
     # Sortuj malejąco, by w poziomym wykresie (rysowanym od dołu) najlepsze KDI były u góry
     prawidlowe_posortowane = sorted(prawidlowe, key=lambda x: x["kdi"], reverse=True)
 
@@ -318,7 +331,7 @@ def render_wykres_slupkowy_kdi(elementy, tytul_x="Wskaźnik KDI"):
         orientation='h',
         marker=dict(
             color=colors,
-            line=dict(color='rgba(255, 255, 255, 0.15)', width=1)
+            line=dict(color='rgba(15, 23, 42, 0.15)' if is_light else 'rgba(255, 255, 255, 0.15)', width=1)
         ),
         hovertemplate='<b>%{y}</b><br>KDI: %{x:.2f}<extra></extra>'
     ))
@@ -327,11 +340,11 @@ def render_wykres_slupkowy_kdi(elementy, tytul_x="Wskaźnik KDI"):
     fig.add_vline(
         x=1.20,
         line_dash="dash",
-        line_color="#facc15",
+        line_color="#d97706" if is_light else "#facc15",
         line_width=1.5,
         annotation_text="1.20 (Granica)",
         annotation_position="top right",
-        annotation_font=dict(color="#facc15", size=10, family="Inter, sans-serif")
+        annotation_font=dict(color="#d97706" if is_light else "#facc15", size=10, family="Inter, sans-serif")
     )
 
     # Oblicz dynamiczną wysokość, by wykres był kompaktowy
@@ -340,26 +353,26 @@ def render_wykres_slupkowy_kdi(elementy, tytul_x="Wskaźnik KDI"):
     fig.update_layout(
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(family='Inter, sans-serif'),
+        font=dict(family='Inter, sans-serif', color='#0f172a' if is_light else '#f1f5f9'),
         margin=dict(l=15, r=15, t=25, b=25),
         height=wysokosc,
         xaxis=dict(
-            title=dict(text=tytul_x, font=dict(color='#94a3b8', size=11)),
+            title=dict(text=tytul_x, font=dict(color='#64748b' if is_light else '#94a3b8', size=11)),
             showgrid=True,
-            gridcolor='rgba(255, 255, 255, 0.06)',
-            color='#94a3b8',
+            gridcolor='rgba(0, 0, 0, 0.08)' if is_light else 'rgba(255, 255, 255, 0.06)',
+            color='#64748b' if is_light else '#94a3b8',
             tickformat='.2f',
             tickfont=dict(size=11)
         ),
         yaxis=dict(
             showgrid=False,
-            color='#f1f5f9',
+            color='#0f172a' if is_light else '#f1f5f9',
             tickfont=dict(size=12)
         ),
         hoverlabel=dict(
-            bgcolor='#1c1c20',
-            bordercolor='#3f3f46',
-            font=dict(color='#ffffff', family='Inter, sans-serif', size=12)
+            bgcolor='#ffffff' if is_light else '#1c1c20',
+            bordercolor='#cbd5e1' if is_light else '#3f3f46',
+            font=dict(color='#0f172a' if is_light else '#ffffff', family='Inter, sans-serif', size=12)
         )
     )
     return fig

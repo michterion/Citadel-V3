@@ -418,5 +418,213 @@ MONO_THEME_CSS = """
 </style>
 """
 
-def pobierz_motyw_css(tryb_mono: bool = False) -> str:
-    return MONO_THEME_CSS if tryb_mono else DARK_THEME_CSS
+LIGHT_MONO_THEME_CSS = """
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+    :root, .stApp {
+        background-color: #f8fafc !important;
+        color: #0f172a !important;
+        --text-color: #0f172a !important;
+        --background-color: #f8fafc !important;
+        --secondary-background-color: #f1f5f9 !important;
+        --primary-color: #0f172a !important;
+    }
+    
+    header[data-testid="stHeader"] {
+        background-color: transparent !important;
+    }
+
+    .bento-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 18px;
+        padding: 20px;
+        box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+        margin-bottom: 20px;
+    }
+    .bento-card-header {
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #64748b;
+        margin-bottom: 6px;
+    }
+    .bento-card-value { font-size: 1.8rem; font-weight: 700; color: #0f172a; }
+    .bento-card-sub { font-size: 0.8rem; margin-top: 5px; color: #94a3b8; }
+    
+    /* Dynamiczne kolory akcentów w jasnym trybie - żywe, eleganckie i czytelne */
+    .accent-purple { color: #9333ea; }
+    .accent-cyan { color: #0284c7; }
+    .accent-green { color: #16a34a; }
+    .accent-rose { color: #e11d48; }
+
+    .user-pill {
+        display: inline-flex;
+        align-items: center;
+        background: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        border-radius: 12px;
+        padding: 6px 14px;
+        font-size: 0.88rem;
+        color: #0f172a;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .profile-banner-card {
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 12px;
+        padding: 12px 18px;
+        margin-bottom: 18px;
+        display: flex;
+        gap: 24px;
+        align-items: center;
+        flex-wrap: wrap;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+    }
+    .profile-banner-card strong {
+        color: #0f172a !important;
+    }
+    .profile-banner-card span {
+        color: #64748b !important;
+    }
+
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background-color: #f1f5f9;
+        padding: 6px;
+        border-radius: 14px;
+        border: 1px solid #e2e8f0;
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 40px;
+        border-radius: 10px;
+        color: #64748b;
+        border: none;
+        padding: 0 16px;
+        font-weight: 500;
+    }
+    .stTabs [aria-selected="true"] {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+    }
+    div[data-baseweb="tab-highlight"] {
+        display: none !important;
+    }
+    div[data-baseweb="tab-border"] {
+        background-color: transparent !important;
+    }
+
+    div[data-testid="stForm"] {
+        background-color: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 16px !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
+    }
+    .stTextInput > div > div, .stNumberInput > div > div, .stSelectbox > div > div, .stDateInput > div > div {
+        background-color: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 10px !important;
+        color: #0f172a !important;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+    }
+    .stTextInput > div > div:hover, .stNumberInput > div > div:hover, .stSelectbox > div > div:hover, .stDateInput > div > div:hover {
+        border-color: #94a3b8 !important;
+    }
+    .stTextInput > div > div:focus-within, .stNumberInput > div > div:focus-within, .stSelectbox > div > div:focus-within, .stDateInput > div > div:focus-within {
+        border-color: #0f172a !important;
+        box-shadow: 0 0 12px rgba(15, 23, 42, 0.12) !important;
+    }
+    .stTextInput input, .stNumberInput input {
+        color: #0f172a !important;
+    }
+    .stSelectbox div[data-baseweb="select"] span {
+        color: #0f172a !important;
+    }
+    div[data-baseweb="popover"], div[data-baseweb="menu"], ul[role="listbox"] {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+    }
+    div[data-baseweb="menu"] li, ul[role="listbox"] li {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+    }
+    div[data-baseweb="menu"] li:hover, ul[role="listbox"] li:hover {
+        background-color: #f1f5f9 !important;
+        color: #0f172a !important;
+    }
+    div[data-baseweb="menu"] [aria-selected="true"], ul[role="listbox"] [aria-selected="true"] {
+        background-color: #e2e8f0 !important;
+        color: #0f172a !important;
+    }
+
+    .stButton > button, div[data-testid="stFormSubmitButton"] > button {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
+        color: #ffffff !important;
+        border: 1px solid #0f172a !important;
+        border-radius: 10px !important;
+        padding: 9px 22px !important;
+        font-weight: 600 !important;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15) !important;
+        transition: all 0.2s ease !important;
+    }
+    .stButton > button:hover, div[data-testid="stFormSubmitButton"] > button:hover {
+        background: linear-gradient(135deg, #334155 0%, #1e293b 100%) !important;
+        border-color: #334155 !important;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.22) !important;
+    }
+
+    div[data-testid="stRadio"] label, div[data-testid="stRadio"] label p {
+        color: #0f172a !important;
+        font-weight: 600 !important;
+    }
+    div[data-testid="stRadio"] [data-testid="stRadioOption"] [class*="e1dm8mpf4"],
+    div[data-testid="stRadio"] [data-testid="stRadioOption"] > label > div:first-child,
+    div[data-testid="stRadio"] [data-testid="stRadioGroup"] [aria-checked="true"] > div {
+        border-color: #0f172a !important;
+        background-color: #0f172a !important;
+    }
+    div[data-testid="stRadio"] [data-testid="stRadioOption"] [class*="e1dm8mpf5"] {
+        background-color: #ffffff !important;
+    }
+    div[data-testid="stRadio"] [data-testid="stRadioOption"]:hover [class*="e1dm8mpf4"] {
+        border-color: #475569 !important;
+    }
+
+    /* Tabele stDataFrame w jasnym trybie mono */
+    div[data-testid="stDataFrame"] canvas[data-testid="data-grid-canvas"],
+    div[data-testid="stDataFrame"] canvas {
+        filter: invert(0.92) hue-rotate(180deg) saturate(0) contrast(1.1) !important;
+    }
+    div[data-testid="stDataFrame"] {
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+    }
+
+    .login-header-card {
+        text-align: center;
+        border: 1px solid #e2e8f0 !important;
+        box-shadow: 0 4px 25px rgba(0, 0, 0, 0.06) !important;
+    }
+    .login-header-card h2 {
+        color: #0f172a !important;
+    }
+    hr {
+        border-color: #e2e8f0 !important;
+    }
+</style>
+"""
+
+def pobierz_motyw_css(motyw="fiolet") -> str:
+    if isinstance(motyw, bool):
+        motyw = "dark_mono" if motyw else "fiolet"
+    if motyw == "light_mono":
+        return LIGHT_MONO_THEME_CSS
+    elif motyw == "dark_mono":
+        return MONO_THEME_CSS
+    return DARK_THEME_CSS
