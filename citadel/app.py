@@ -75,8 +75,12 @@ if (weryfikacja_df.empty or
 zalogowany_uzytkownik = weryfikacja_df.iloc[0].to_dict()
 st.session_state["auth_user"] = zalogowany_uzytkownik
 
-# Śledzenie aktywności (heartbeat online)
-db_execute("UPDATE uzytkownicy SET ostatnia_aktywnosc = %s WHERE id = %s", (teraz_utc(), curr_user_id))
+# Śledzenie aktywności (heartbeat online - throttled do max 1 zapisu na 60 sekund)
+teraz_akt = teraz_utc()
+ostatni_ping = st.session_state.get("_last_activity_ping")
+if ostatni_ping is None or (teraz_akt - ostatni_ping).total_seconds() >= 60:
+    db_execute("UPDATE uzytkownicy SET ostatnia_aktywnosc = %s WHERE id = %s", (teraz_akt, curr_user_id))
+    st.session_state["_last_activity_ping"] = teraz_akt
 
 # WYMUSZENIE ZMIANY HASŁA STARTOWEGO
 if zalogowany_uzytkownik["wymus_zmiane_hasla"]:
@@ -167,6 +171,7 @@ with col_h5:
     render_user_pill(zalogowany_uzytkownik["imie_nazwisko"], rola_uzytkownika)
     if st.button("Wyloguj", key="btn_logout", use_container_width=True):
         db_execute("UPDATE uzytkownicy SET ostatnia_aktywnosc = NULL WHERE id = %s", (curr_user_id,))
+        st.session_state["_last_activity_ping"] = None
         st.session_state["auth_user"] = None
         st.rerun()
 

@@ -170,6 +170,17 @@ CREATE TABLE IF NOT EXISTS audit_log (
     nowe_dane JSONB,
     zmieniono_o TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX IF NOT EXISTS idx_wplaty_czlonek_data ON wplaty(czlonek_id, data_wplaty);
+CREATE INDEX IF NOT EXISTS idx_wplaty_kolo_data ON wplaty(kolo_id, data_wplaty);
+CREATE INDEX IF NOT EXISTS idx_czlonkowie_kolo ON czlonkowie(kolo_id);
+CREATE INDEX IF NOT EXISTS idx_naliczenia_reczne_czlonek ON naliczenia_reczne(czlonek_id, data_naliczenia);
+CREATE INDEX IF NOT EXISTS idx_korekty_czlonek ON korekty(czlonek_id, data_korekty);
+CREATE INDEX IF NOT EXISTS idx_wydatki_kolo_data ON wydatki(kolo_id, data_wydatku);
+CREATE INDEX IF NOT EXISTS idx_korekty_kasy_kolo ON korekty_kasy(kolo_id, data_korekty);
+CREATE INDEX IF NOT EXISTS idx_kola_region ON kola(region_id);
+CREATE INDEX IF NOT EXISTS idx_kola_kraj ON kola(kraj_id);
+CREATE INDEX IF NOT EXISTS idx_regiony_kraj ON regiony(kraj_id);
+CREATE INDEX IF NOT EXISTS idx_wplaty_oczekujace_kolo ON wplaty_oczekujace(kolo_id);
 """
 
 @st.cache_resource(show_spinner=False)
@@ -335,6 +346,21 @@ def init_db_once():
             cur.execute("ALTER TABLE uzytkownicy ADD COLUMN IF NOT EXISTS ostatnia_aktywnosc TIMESTAMPTZ;")
             cur.execute("ALTER TABLE wplaty_oczekujace ADD COLUMN IF NOT EXISTS idempotency_key TEXT UNIQUE;")
 
+            # Indeksy wydajnościowe na kluczach obcych i filtrach
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_wplaty_czlonek_data ON wplaty(czlonek_id, data_wplaty);
+                CREATE INDEX IF NOT EXISTS idx_wplaty_kolo_data ON wplaty(kolo_id, data_wplaty);
+                CREATE INDEX IF NOT EXISTS idx_czlonkowie_kolo ON czlonkowie(kolo_id);
+                CREATE INDEX IF NOT EXISTS idx_naliczenia_reczne_czlonek ON naliczenia_reczne(czlonek_id, data_naliczenia);
+                CREATE INDEX IF NOT EXISTS idx_korekty_czlonek ON korekty(czlonek_id, data_korekty);
+                CREATE INDEX IF NOT EXISTS idx_wydatki_kolo_data ON wydatki(kolo_id, data_wydatku);
+                CREATE INDEX IF NOT EXISTS idx_korekty_kasy_kolo ON korekty_kasy(kolo_id, data_korekty);
+                CREATE INDEX IF NOT EXISTS idx_kola_region ON kola(region_id);
+                CREATE INDEX IF NOT EXISTS idx_kola_kraj ON kola(kraj_id);
+                CREATE INDEX IF NOT EXISTS idx_regiony_kraj ON regiony(kraj_id);
+                CREATE INDEX IF NOT EXISTS idx_wplaty_oczekujace_kolo ON wplaty_oczekujace(kolo_id);
+            """)
+
             # PRZYWRÓCENIE TRIGGERA AUDYTU
             cur.execute("""
                 CREATE OR REPLACE FUNCTION audit_trigger_func()
@@ -348,6 +374,23 @@ def init_db_once():
                         v_stare_dane := to_jsonb(OLD);
                         v_rekord_id := OLD.id;
                     ELSIF (TG_OP = 'UPDATE') THEN
+                        -- Ignoruj update'y wyłącznie aktywności / logowania (ochrona audit_log przed puchnięciem)
+                        IF TG_TABLE_NAME = 'uzytkownicy' THEN
+                            IF (OLD.login = NEW.login AND 
+                                OLD.haslo_hash = NEW.haslo_hash AND 
+                                OLD.salt = NEW.salt AND 
+                                OLD.imie_nazwisko = NEW.imie_nazwisko AND 
+                                OLD.rola = NEW.rola AND 
+                                OLD.kraj_id IS NOT DISTINCT FROM NEW.kraj_id AND 
+                                OLD.region_id IS NOT DISTINCT FROM NEW.region_id AND 
+                                OLD.kolo_id IS NOT DISTINCT FROM NEW.kolo_id AND 
+                                OLD.is_active = NEW.is_active AND 
+                                OLD.wymus_zmiane_hasla = NEW.wymus_zmiane_hasla AND 
+                                OLD.sesja_wersja = NEW.sesja_wersja) THEN
+                                RETURN NEW;
+                            END IF;
+                        END IF;
+
                         v_stare_dane := to_jsonb(OLD);
                         v_nowe_dane := to_jsonb(NEW);
                         v_rekord_id := NEW.id;
