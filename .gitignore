@@ -1,0 +1,26 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Streamlit secrets (chroni dane dostępowe do bazy przed wyciekiem na GitHub)
+.streamlit/secrets.toml
+citadel/.streamlit/secrets.toml
+
+# Zrzuty i kopie bazy danych
+backups/*.sql
+citadel/backups/*.sql
+
+# Środowiska wirtualne
+venv/
+.venv/
+env/
+
+# Pliki środowiskowe
+.env
+
+# Edytory i system operacyjny
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
