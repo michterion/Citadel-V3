@@ -165,6 +165,21 @@ def render_wykres_kdi(punkty_x, punkty_kdi):
     max_kdi = max(valid_kdi) if valid_kdi else 2.0
     y_max = max(max_kdi + 0.35, 1.8)
 
+    # Dynamiczne kolorowanie KDI spójne ze słownikiem barw KDI_STOPS
+    ostatnie_kdi = valid_kdi[-1] if valid_kdi else 1.0
+    kolor_kdi = pobierz_kolor_kdi(ostatnie_kdi)
+
+    def hex_to_rgb(hex_c: str):
+        c = hex_c.lstrip('#')
+        if len(c) == 6:
+            return tuple(int(c[i:i+2], 16) for i in (0, 2, 4))
+        return (56, 189, 248)
+
+    r, g, b = hex_to_rgb(kolor_kdi)
+    kolor_poswiaty_mid = f'rgba({r}, {g}, {b}, 0.38)'
+    kolor_poswiaty_outer = f'rgba({r}, {g}, {b}, 0.16)'
+    kolor_wypelnienia = f'rgba({r}, {g}, {b}, 0.08)'
+
     fig = go.Figure()
 
     # Subtelne strefy decyzyjne w tle
@@ -192,39 +207,62 @@ def render_wykres_kdi(punkty_x, punkty_kdi):
         annotation_font=dict(color="#facc15", size=10, family="Inter, sans-serif")
     )
 
-    # Zewnętrzna poświata neonowa (błękit)
+    # 1. Niewidoczna linia bazowa na dole wykresu (y=0) dla wypełnienia
+    fig.add_trace(go.Scatter(
+        x=punkty_x,
+        y=[0.0] * len(punkty_x),
+        mode='lines',
+        line=dict(width=0, color='rgba(0,0,0,0)'),
+        hoverinfo='skip',
+        showlegend=False
+    ))
+
+    # 2. Półprzezroczyste wypełnienie pod wykresem w kolorze bieżącego KDI
     fig.add_trace(go.Scatter(
         x=punkty_x,
         y=punkty_kdi,
         mode='lines',
-        line=dict(color='rgba(56, 189, 248, 0.16)', width=8, shape='spline'),
+        line=dict(width=0, color='rgba(0,0,0,0)', shape='spline'),
+        fill='tonexty',
+        fillcolor=kolor_wypelnienia,
         connectgaps=False,
         hoverinfo='skip',
         showlegend=False
     ))
 
-    # Środkowa poświata neonowa
+    # 3. Zewnętrzna szeroka poświata neonowa
     fig.add_trace(go.Scatter(
         x=punkty_x,
         y=punkty_kdi,
         mode='lines',
-        line=dict(color='rgba(56, 189, 248, 0.38)', width=4.5, shape='spline'),
+        line=dict(color=kolor_poswiaty_outer, width=8, shape='spline'),
         connectgaps=False,
         hoverinfo='skip',
         showlegend=False
     ))
 
-    # Główna ostra linia neonowa (bez markerów/punktów)
-    is_single_point = len(punkty_kdi) == 1
+    # 4. Środkowa poświata neonowa
+    fig.add_trace(go.Scatter(
+        x=punkty_x,
+        y=punkty_kdi,
+        mode='lines',
+        line=dict(color=kolor_poswiaty_mid, width=4.5, shape='spline'),
+        connectgaps=False,
+        hoverinfo='skip',
+        showlegend=False
+    ))
+
+    # 5. Główna ostra linia neonowa (bez markerów/punktów)
+    is_single_point = len(valid_kdi) == 1
     mode_glowny = 'markers' if is_single_point else 'lines'
-    marker_dict = dict(size=8, color='#38bdf8', line=dict(color='#ffffff', width=2)) if is_single_point else None
+    marker_dict = dict(size=8, color=kolor_kdi, line=dict(color='#ffffff', width=2)) if is_single_point else None
 
     fig.add_trace(go.Scatter(
         x=punkty_x,
         y=punkty_kdi,
         mode=mode_glowny,
         name='KDI',
-        line=dict(color='#38bdf8', width=2.2, shape='spline'),
+        line=dict(color=kolor_kdi, width=2.2, shape='spline'),
         marker=marker_dict,
         connectgaps=False,
         hovertemplate='Data: %{x}<br><b>KDI: %{y:.2f}</b><extra></extra>'
@@ -243,7 +281,7 @@ def render_wykres_kdi(punkty_x, punkty_kdi):
             showspikes=True,
             spikethickness=1,
             spikedash='dot',
-            spikecolor='#38bdf8',
+            spikecolor=kolor_kdi,
             spikemode='across'
         ),
         yaxis=dict(
@@ -257,7 +295,7 @@ def render_wykres_kdi(punkty_x, punkty_kdi):
         hovermode="x unified",
         hoverlabel=dict(
             bgcolor='#191430',
-            bordercolor='#38bdf8',
+            bordercolor=kolor_kdi,
             font=dict(color='#ffffff', family='Inter, sans-serif', size=12)
         )
     )
