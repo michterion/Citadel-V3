@@ -236,8 +236,8 @@ DARK_THEME_CSS = """
         box-shadow: 0 0 25px rgba(99, 102, 241, 0.35) !important;
     }
     .profile-banner-card {
-        background: #161228;
-        border: 1px solid #282046;
+        background: #161228 !important;
+        border: 1px solid #282046 !important;
         border-radius: 12px;
         padding: 12px 18px;
         margin-bottom: 18px;
@@ -245,6 +245,10 @@ DARK_THEME_CSS = """
         gap: 24px;
         align-items: center;
         flex-wrap: wrap;
+    }
+    div[data-testid="stDataFrame"] {
+        border: 1px solid #282046 !important;
+        border-radius: 12px !important;
     }
 </style>
 """
@@ -384,8 +388,14 @@ MONO_THEME_CSS = """
         border-color: #a1a1aa !important;
     }
 
-    /* Tabele stDataFrame - eliminacja fioletów i spójność z ciemną szarością */
+    /* Tabele stDataFrame - dynamiczna desaturacja fioletowego canvasu do neutralnej szarości */
+    div[data-testid="stDataFrame"] canvas[data-testid="data-grid-canvas"],
+    div[data-testid="stDataFrame"] canvas {
+        filter: saturate(0) brightness(1.15) !important;
+    }
     div[data-testid="stDataFrame"] {
+        border: 1px solid #2e2e34 !important;
+        border-radius: 12px !important;
         --gdg-bg-header: #1c1c20 !important;
         --gdg-bg-header-hovered: #26262b !important;
         --gdg-bg-header-has-focus: #26262b !important;
