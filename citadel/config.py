@@ -435,6 +435,29 @@ LIGHT_MONO_THEME_CSS = """
         background-color: transparent !important;
     }
 
+    /* Ogólna typografia bazowa dla jasnego motywu */
+    .stApp, .stApp p, .stApp span, .stApp label, .stApp li, .stApp small {
+        color: #0f172a;
+    }
+    h1, h2, h3, h4, h5, h6 {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+    }
+
+    /* Wszystkie etykiety pól (input, selectbox, date, radio itp.) */
+    label,
+    label p,
+    label span,
+    [data-testid="stWidgetLabel"],
+    [data-testid="stWidgetLabel"] *,
+    div[data-testid="stWidgetLabel"] p,
+    div[data-testid="stWidgetLabel"] span {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+        font-weight: 600 !important;
+    }
+
+    /* Karty Bento */
     .bento-card {
         background: #ffffff;
         border: 1px solid #e2e8f0;
@@ -448,17 +471,27 @@ LIGHT_MONO_THEME_CSS = """
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.08em;
-        color: #64748b;
+        color: #64748b !important;
+        -webkit-text-fill-color: #64748b !important;
         margin-bottom: 6px;
     }
-    .bento-card-value { font-size: 1.8rem; font-weight: 700; color: #0f172a; }
-    .bento-card-sub { font-size: 0.8rem; margin-top: 5px; color: #94a3b8; }
+    .bento-card-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+    .bento-card-sub {
+        font-size: 0.8rem;
+        margin-top: 5px;
+        color: #64748b !important;
+        -webkit-text-fill-color: #64748b !important;
+    }
     
     /* Dynamiczne kolory akcentów w jasnym trybie - żywe, eleganckie i czytelne */
-    .accent-purple { color: #9333ea; }
-    .accent-cyan { color: #0284c7; }
-    .accent-green { color: #16a34a; }
-    .accent-rose { color: #e11d48; }
+    .accent-purple { color: #9333ea !important; -webkit-text-fill-color: #9333ea !important; }
+    .accent-cyan { color: #0284c7 !important; -webkit-text-fill-color: #0284c7 !important; }
+    .accent-green { color: #16a34a !important; -webkit-text-fill-color: #16a34a !important; }
+    .accent-rose { color: #e11d48 !important; -webkit-text-fill-color: #e11d48 !important; }
 
     .user-pill {
         display: inline-flex;
@@ -468,7 +501,8 @@ LIGHT_MONO_THEME_CSS = """
         border-radius: 12px;
         padding: 6px 14px;
         font-size: 0.88rem;
-        color: #0f172a;
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
 
@@ -484,13 +518,12 @@ LIGHT_MONO_THEME_CSS = """
         flex-wrap: wrap;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
     }
-    .profile-banner-card strong {
-        color: #0f172a !important;
-    }
     .profile-banner-card span {
         color: #64748b !important;
+        -webkit-text-fill-color: #64748b !important;
     }
 
+    /* Zakładki - zarówno poziomu 1 jak i podrzędne poziomu 2 */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
         background-color: #f1f5f9;
@@ -501,16 +534,36 @@ LIGHT_MONO_THEME_CSS = """
     .stTabs [data-baseweb="tab"] {
         height: 40px;
         border-radius: 10px;
-        color: #64748b;
         border: none;
         padding: 0 16px;
         font-weight: 500;
+        background-color: transparent !important;
     }
-    .stTabs [aria-selected="true"] {
-        background: #ffffff !important;
+    .stTabs [data-baseweb="tab"],
+    .stTabs [data-baseweb="tab"] *,
+    .stTabs [data-baseweb="tab"] p,
+    .stTabs [data-baseweb="tab"] div,
+    .stTabs [data-baseweb="tab"] span {
+        color: #334155 !important;
+        -webkit-text-fill-color: #334155 !important;
+    }
+    .stTabs [data-baseweb="tab"]:hover,
+    .stTabs [data-baseweb="tab"]:hover * {
         color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+    }
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background: #ffffff !important;
         border: 1px solid #cbd5e1 !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    }
+    .stTabs [data-baseweb="tab"][aria-selected="true"],
+    .stTabs [data-baseweb="tab"][aria-selected="true"] *,
+    .stTabs [data-baseweb="tab"][aria-selected="true"] p,
+    .stTabs [data-baseweb="tab"][aria-selected="true"] span {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+        font-weight: 700 !important;
     }
     div[data-baseweb="tab-highlight"] {
         display: none !important;
@@ -519,6 +572,7 @@ LIGHT_MONO_THEME_CSS = """
         background-color: transparent !important;
     }
 
+    /* Formularze i pola edycyjne */
     div[data-testid="stForm"] {
         background-color: #ffffff !important;
         border: 1px solid #e2e8f0 !important;
@@ -539,32 +593,67 @@ LIGHT_MONO_THEME_CSS = """
         border-color: #0f172a !important;
         box-shadow: 0 0 12px rgba(15, 23, 42, 0.12) !important;
     }
-    .stTextInput input, .stNumberInput input {
+
+    /* Wartości wpisywane i wybrane wewnątrz pól tekstowych / selectboxów */
+    input, textarea, select {
         color: #0f172a !important;
-    }
-    .stSelectbox div[data-baseweb="select"] span {
-        color: #0f172a !important;
-    }
-    div[data-baseweb="popover"], div[data-baseweb="menu"], ul[role="listbox"] {
+        -webkit-text-fill-color: #0f172a !important;
         background-color: #ffffff !important;
-        color: #0f172a !important;
     }
-    div[data-baseweb="menu"] li, ul[role="listbox"] li {
-        background-color: #ffffff !important;
-        color: #0f172a !important;
+    input::placeholder, textarea::placeholder {
+        color: #94a3b8 !important;
+        -webkit-text-fill-color: #94a3b8 !important;
     }
-    div[data-baseweb="menu"] li:hover, ul[role="listbox"] li:hover {
-        background-color: #f1f5f9 !important;
+    div[data-baseweb="select"],
+    div[data-baseweb="select"] *,
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] div,
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] span {
         color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
     }
-    div[data-baseweb="menu"] [aria-selected="true"], ul[role="listbox"] [aria-selected="true"] {
-        background-color: #e2e8f0 !important;
-        color: #0f172a !important;
+    div[data-baseweb="select"] svg {
+        fill: #0f172a !important;
     }
 
+    /* Pola zablokowane (disabled) */
+    input:disabled,
+    textarea:disabled,
+    div[aria-disabled="true"],
+    div[aria-disabled="true"] * {
+        color: #64748b !important;
+        -webkit-text-fill-color: #64748b !important;
+        background-color: #f8fafc !important;
+    }
+
+    /* Menu rozwijane (Popovers i listy opcji) */
+    div[data-baseweb="popover"],
+    div[data-baseweb="menu"],
+    ul[role="listbox"],
+    li[role="option"] {
+        background-color: #ffffff !important;
+    }
+    div[data-baseweb="popover"] *,
+    div[data-baseweb="menu"] *,
+    ul[role="listbox"] *,
+    li[role="option"] * {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+    }
+    li[role="option"]:hover,
+    li[role="option"]:hover * {
+        background-color: #f1f5f9 !important;
+    }
+    li[role="option"][aria-selected="true"],
+    li[role="option"][aria-selected="true"] * {
+        background-color: #e2e8f0 !important;
+        font-weight: 600 !important;
+    }
+
+    /* Przyciski */
     .stButton > button, div[data-testid="stFormSubmitButton"] > button {
         background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
         color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
         border: 1px solid #0f172a !important;
         border-radius: 10px !important;
         padding: 9px 22px !important;
@@ -578,8 +667,15 @@ LIGHT_MONO_THEME_CSS = """
         box-shadow: 0 4px 14px rgba(15, 23, 42, 0.22) !important;
     }
 
-    div[data-testid="stRadio"] label, div[data-testid="stRadio"] label p {
+    /* Radio buttony i Checkboxy */
+    div[data-testid="stRadio"] label,
+    div[data-testid="stRadio"] label p,
+    div[data-testid="stRadio"] label span,
+    div[data-testid="stCheckbox"] label,
+    div[data-testid="stCheckbox"] label p,
+    div[data-testid="stCheckbox"] label span {
         color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
         font-weight: 600 !important;
     }
     div[data-testid="stRadio"] [data-testid="stRadioOption"] [class*="e1dm8mpf4"],
@@ -593,6 +689,36 @@ LIGHT_MONO_THEME_CSS = """
     }
     div[data-testid="stRadio"] [data-testid="stRadioOption"]:hover [class*="e1dm8mpf4"] {
         border-color: #475569 !important;
+    }
+
+    /* Komunikaty alertów st.warning, st.info, st.error, st.success */
+    div[data-testid="stAlert"] {
+        border-radius: 12px !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+    }
+    div[data-testid="stAlert"],
+    div[data-testid="stAlert"] *,
+    div[data-testid="stAlert"] p,
+    div[data-testid="stAlert"] span,
+    div[data-testid="stAlert"] div {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+    }
+
+    /* Teksty w kontenerach Markdown i Caption */
+    div[data-testid="stMarkdownContainer"],
+    div[data-testid="stMarkdownContainer"] p,
+    div[data-testid="stMarkdownContainer"] span,
+    div[data-testid="stMarkdownContainer"] div,
+    div[data-testid="stMarkdownContainer"] li {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+    }
+    div[data-testid="stCaptionContainer"],
+    div[data-testid="stCaptionContainer"] p,
+    div[data-testid="stCaptionContainer"] span {
+        color: #475569 !important;
+        -webkit-text-fill-color: #475569 !important;
     }
 
     /* Tabele stDataFrame w jasnym trybie mono */
