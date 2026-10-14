@@ -6,7 +6,7 @@ import streamlit as st
 from config import DATA_ODCIECIA, parse_date, pobierz_kolor_kdi
 from database import db_query
 from calculations import oblicz_naliczenia_gr, filtruj_interwal, pobierz_stawke_za_miesiac
-from components.charts import render_wykres_salda, render_wykres_kdi
+from components.charts import render_wykres_salda, render_wykres_kdi, PLOTLY_CONFIG
 
 def render_tab_profile(dane_przeliczone, dzis):
     if not dane_przeliczone:
@@ -109,9 +109,9 @@ def render_tab_profile(dane_przeliczone, dzis):
         
     subtab_saldo, subtab_kdi = st.tabs(["📉 Oś Czasu Salda (PLN)", "🎯 Dynamika Wskaźnika KDI"])
     with subtab_saldo:
-        st.plotly_chart(render_wykres_salda(punkty_x, punkty_saldo), width="stretch")
+        st.plotly_chart(render_wykres_salda(punkty_x, punkty_saldo), width="stretch", config=PLOTLY_CONFIG)
     with subtab_kdi:
-        st.plotly_chart(render_wykres_kdi(punkty_x, punkty_kdi), width="stretch")
+        st.plotly_chart(render_wykres_kdi(punkty_x, punkty_kdi), width="stretch", config=PLOTLY_CONFIG)
 
     col_w, col_r, col_k = st.columns(3)
     with col_w:

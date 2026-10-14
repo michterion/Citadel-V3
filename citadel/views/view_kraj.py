@@ -4,6 +4,7 @@ from config import pobierz_kolor_kdi, pobierz_kolor_uprawnionych
 from database import pobierz_aktywne_kola_kraju
 from calculations import przelicz_finanse_wielu_kol
 from components.ui import render_bento_card
+from components.charts import render_wykres_slupkowy_kdi, PLOTLY_CONFIG
 
 def render_view_kraj(wybrany_kraj_id, mapa_krajow, mapa_regionow, dzis):
     nazwa_kraju = mapa_krajow.get(wybrany_kraj_id, "Polska")
@@ -90,6 +91,7 @@ def render_view_kraj(wybrany_kraj_id, mapa_krajow, mapa_regionow, dzis):
 
     st.markdown("### 🗺️ Zestawienie Regionów w Polsce")
     tabela_zbiorcza_reg = []
+    dane_wykres_reg = []
     for r_id, s in statystyki_per_region.items():
         r_kdi = round(s["total_z"] / s["total_s"], 2) if s["total_s"] > 0 else None
         r_pct = (s["uprawnieni"] / s["Członkowie"] * 100.0) if s["Członkowie"] > 0 else 0.0
@@ -103,6 +105,8 @@ def render_view_kraj(wybrany_kraj_id, mapa_krajow, mapa_regionow, dzis):
             "KDI Regionu": f"{r_kdi:.2f}" if r_kdi is not None else "Brak danych",
             "Uprawnieni": f"{s['uprawnieni']}/{s['Członkowie']} ({r_pct:.1f}%)"
         })
+        if r_kdi is not None:
+            dane_wykres_reg.append({"nazwa": s["Region"], "kdi": r_kdi})
     
     if bez_regionu_stat["Liczba Kół"] > 0:
         br_kdi = round(bez_regionu_stat["total_z"] / bez_regionu_stat["total_s"], 2) if bez_regionu_stat["total_s"] > 0 else None
@@ -117,5 +121,15 @@ def render_view_kraj(wybrany_kraj_id, mapa_krajow, mapa_regionow, dzis):
             "KDI Regionu": f"{br_kdi:.2f}" if br_kdi is not None else "Brak danych",
             "Uprawnieni": f"{bez_regionu_stat['uprawnieni']}/{bez_regionu_stat['Członkowie']} ({br_pct:.1f}%)"
         })
+        if br_kdi is not None:
+            dane_wykres_reg.append({"nazwa": bez_regionu_stat["Region"], "kdi": br_kdi})
 
-    st.dataframe(pd.DataFrame(tabela_zbiorcza_reg), width="stretch", hide_index=True)
+    tab_tabela, tab_wykres = st.tabs(["📋 Tabela Regionów", "📊 Porównanie KDI Regionów"])
+    with tab_tabela:
+        st.dataframe(pd.DataFrame(tabela_zbiorcza_reg), width="stretch", hide_index=True)
+    with tab_wykres:
+        fig_reg = render_wykres_slupkowy_kdi(dane_wykres_reg, tytul_x="Wskaźnik KDI Regionu")
+        if fig_reg:
+            st.plotly_chart(fig_reg, width="stretch", config=PLOTLY_CONFIG)
+        else:
+            st.caption("Brak danych KDI do wygenerowania wykresu regionów.")

@@ -4,6 +4,7 @@ from config import pobierz_kolor_kdi, pobierz_kolor_uprawnionych
 from database import db_query
 from calculations import przelicz_finanse_wielu_kol
 from components.ui import render_bento_card
+from components.charts import render_wykres_slupkowy_kdi, PLOTLY_CONFIG
 
 def render_view_region(wybrany_kraj_id, wybrany_region_id, nazwa_wybranego_regionu, nazwa_kraju, dzis):
     st.markdown(f"## 📊 Pulpit Analityczny: {nazwa_wybranego_regionu}")
@@ -38,6 +39,7 @@ def render_view_region(wybrany_kraj_id, wybrany_region_id, nazwa_wybranego_regio
     reg_uprawnieni_count = 0
     
     tabela_kol = []
+    dane_wykres_kol = []
     for k_row in kola_w_tym_regionie.itertuples(index=False):
         k_id = k_row.id
         k_nazwa = k_row.nazwa
@@ -67,6 +69,8 @@ def render_view_region(wybrany_kraj_id, wybrany_region_id, nazwa_wybranego_regio
             "KDI Koła": f"{k_kdi_val:.2f}" if k_kdi_val is not None else "Brak danych",
             "Uprawnieni": f"{upr_count}/{czl_count} ({k_pct_upr:.1f}%)"
         })
+        if k_kdi_val is not None:
+            dane_wykres_kol.append({"nazwa": k_nazwa, "kdi": k_kdi_val})
 
     reg_kdi_val = round(reg_total_z_gr / reg_total_s_gr, 2) if reg_total_s_gr > 0 else None
     reg_kdi_str = f"{reg_kdi_val:.2f}" if reg_kdi_val is not None else "Brak danych"
@@ -87,4 +91,12 @@ def render_view_region(wybrany_kraj_id, wybrany_region_id, nazwa_wybranego_regio
         render_bento_card("Uprawnieni do Głosu (Region)", f"{reg_uprawnieni_count} / {reg_lacznie_czlonkow}", f"{reg_pct_upr:.1f}% (karencja ≤ 6 msc)", styl_custom=f"color: {kolor_reg_upr}; text-shadow: 0 0 16px {kolor_reg_upr}55;")
 
     st.markdown(f"### 🏛️ Koła podległe pod {nazwa_wybranego_regionu}")
-    st.dataframe(pd.DataFrame(tabela_kol), width="stretch", hide_index=True)
+    tab_tabela, tab_wykres = st.tabs(["📋 Tabela Kół", "📊 Porównanie KDI Kół"])
+    with tab_tabela:
+        st.dataframe(pd.DataFrame(tabela_kol), width="stretch", hide_index=True)
+    with tab_wykres:
+        fig_kol = render_wykres_slupkowy_kdi(dane_wykres_kol, tytul_x="Wskaźnik KDI Koła")
+        if fig_kol:
+            st.plotly_chart(fig_kol, width="stretch", config=PLOTLY_CONFIG)
+        else:
+            st.caption("Brak danych KDI do wygenerowania wykresu kół.")
