@@ -85,9 +85,9 @@ def render_view_kraj(wybrany_kraj_id, mapa_krajow, mapa_regionow, dzis):
     with kc2:
         render_bento_card("Suma Składek (Kraj)", f"{(kraj_wplaty_gr / 100.0):,.2f} PLN", f"Wydatki: {(kraj_wydatki_gr / 100.0):,.2f} PLN", "accent-cyan")
     with kc3:
-        render_bento_card("Zagregowany KDI Kraju", kraj_kdi_str, "Rekomendowane: ≤ 1.20", styl_custom=f"color: {kolor_kraj_kdi}; text-shadow: 0 0 16px {kolor_kraj_kdi}55;")
+        render_bento_card("Zagregowany KDI Kraju", kraj_kdi_str, "Rekomendowane: ≤ 1.20", styl_custom=f"color: {kolor_kraj_kdi}; text-shadow: 0 0 16px {kolor_kraj_kdi};")
     with kc4:
-        render_bento_card("Uprawnieni do Głosu (Kraj)", f"{kraj_uprawnieni_count} / {kraj_czlonkowie_count}", f"{kraj_pct_upr:.1f}% (karencja ≤ 6 msc)", styl_custom=f"color: {kolor_kraj_upr}; text-shadow: 0 0 16px {kolor_kraj_upr}55;")
+        render_bento_card("Uprawnieni do Głosu (Kraj)", f"{kraj_uprawnieni_count} / {kraj_czlonkowie_count}", f"{kraj_pct_upr:.1f}% (karencja ≤ 6 msc)", styl_custom=f"color: {kolor_kraj_upr}; text-shadow: 0 0 16px {kolor_kraj_upr};")
 
     st.markdown("### 🗺️ Zestawienie Regionów w Polsce")
     tabela_zbiorcza_reg = []
@@ -126,7 +126,17 @@ def render_view_kraj(wybrany_kraj_id, mapa_krajow, mapa_regionow, dzis):
 
     tab_tabela, tab_wykres = st.tabs(["📋 Tabela Regionów", "📊 Porównanie KDI Regionów"])
     with tab_tabela:
-        st.dataframe(pd.DataFrame(tabela_zbiorcza_reg), width="stretch", hide_index=True)
+        df_reg = pd.DataFrame(tabela_zbiorcza_reg)
+        if not df_reg.empty:
+            def stylizuj_kdi_reg(wartosc):
+                kolor = pobierz_kolor_kdi(wartosc)
+                if wartosc == "Brak danych":
+                    return f"color: {kolor}; font-style: italic;"
+                return f"color: {kolor}; font-weight: 700;"
+            styler_reg = df_reg.style.map(stylizuj_kdi_reg, subset=["KDI Regionu"])
+            st.dataframe(styler_reg, width="stretch", hide_index=True)
+        else:
+            st.dataframe(df_reg, width="stretch", hide_index=True)
     with tab_wykres:
         fig_reg = render_wykres_slupkowy_kdi(dane_wykres_reg, tytul_x="Wskaźnik KDI Regionu")
         if fig_reg:

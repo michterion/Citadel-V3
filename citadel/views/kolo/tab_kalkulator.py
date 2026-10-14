@@ -150,11 +150,11 @@ def render_tab_kalkulator(dzis):
             kolor_salda = "accent-green" if saldo_koncowe_pln >= 0 else "accent-rose"
             render_bento_card("Saldo Końcowe", f"{saldo_koncowe_pln:,.2f} PLN", f"Start: {calc_saldo_start_pln:.2f} zł | Wpłaty: {calc_wplaty_pln:.2f} zł", kolor_salda)
         with cb2:
-            render_bento_card("Wskaźnik KDI", kdi_str, "Cel statutowy: ≤ 1.20", styl_custom=f"color: {kolor_kdi}; text-shadow: 0 0 16px {kolor_kdi}55;")
+            render_bento_card("Wskaźnik KDI", kdi_str, "Cel statutowy: ≤ 1.20", styl_custom=f"color: {kolor_kdi}; text-shadow: 0 0 16px {kolor_kdi};")
 
         cb3, cb4 = st.columns(2)
         with cb3:
-            kolor_glosu = "#10b981" if moze_glosowac else "#f43f5e"
+            kolor_glosu = "#22c55e" if moze_glosowac else "#f43f5e"
             napis_glosu = "TAK (UPRAWNIONY)" if moze_glosowac else "NIE (ZAWIESZONY)"
             render_bento_card("Prawo Głosu (Karencja ≤ 6 msc)", napis_glosu, f"Zadłużenie: {miesiace_dlugu:.1f} msc (limit: 6.0 msc)", styl_custom=f"color: {kolor_glosu}; font-size: 1.45rem;")
         with cb4:

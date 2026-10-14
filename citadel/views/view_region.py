@@ -86,14 +86,24 @@ def render_view_region(wybrany_kraj_id, wybrany_region_id, nazwa_wybranego_regio
     with rc2:
         render_bento_card("Suma Składek Regionu", f"{(reg_wplaty_gr / 100.0):,.2f} PLN", f"Wydatki: {(reg_wydatki_gr / 100.0):,.2f} PLN", "accent-cyan")
     with rc3:
-        render_bento_card("Zagregowany KDI Regionu", reg_kdi_str, "Rekomendowane: ≤ 1.20", styl_custom=f"color: {kolor_reg_kdi}; text-shadow: 0 0 16px {kolor_reg_kdi}55;")
+        render_bento_card("Zagregowany KDI Regionu", reg_kdi_str, "Rekomendowane: ≤ 1.20", styl_custom=f"color: {kolor_reg_kdi}; text-shadow: 0 0 16px {kolor_reg_kdi};")
     with rc4:
-        render_bento_card("Uprawnieni do Głosu (Region)", f"{reg_uprawnieni_count} / {reg_lacznie_czlonkow}", f"{reg_pct_upr:.1f}% (karencja ≤ 6 msc)", styl_custom=f"color: {kolor_reg_upr}; text-shadow: 0 0 16px {kolor_reg_upr}55;")
+        render_bento_card("Uprawnieni do Głosu (Region)", f"{reg_uprawnieni_count} / {reg_lacznie_czlonkow}", f"{reg_pct_upr:.1f}% (karencja ≤ 6 msc)", styl_custom=f"color: {kolor_reg_upr}; text-shadow: 0 0 16px {kolor_reg_upr};")
 
     st.markdown(f"### 🏛️ Koła podległe pod {nazwa_wybranego_regionu}")
     tab_tabela, tab_wykres = st.tabs(["📋 Tabela Kół", "📊 Porównanie KDI Kół"])
     with tab_tabela:
-        st.dataframe(pd.DataFrame(tabela_kol), width="stretch", hide_index=True)
+        df_kol = pd.DataFrame(tabela_kol)
+        if not df_kol.empty:
+            def stylizuj_kdi_kolo(wartosc):
+                kolor = pobierz_kolor_kdi(wartosc)
+                if wartosc == "Brak danych":
+                    return f"color: {kolor}; font-style: italic;"
+                return f"color: {kolor}; font-weight: 700;"
+            styler_kol = df_kol.style.map(stylizuj_kdi_kolo, subset=["KDI Koła"])
+            st.dataframe(styler_kol, width="stretch", hide_index=True)
+        else:
+            st.dataframe(df_kol, width="stretch", hide_index=True)
     with tab_wykres:
         fig_kol = render_wykres_slupkowy_kdi(dane_wykres_kol, tytul_x="Wskaźnik KDI Koła")
         if fig_kol:

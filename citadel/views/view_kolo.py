@@ -88,13 +88,13 @@ def render_view_kolo(zalogowany_uzytkownik, wybrany_kraj_id, wybrany_region_id, 
     with c2:
         render_bento_card("Suma Wpłaconych Składek", f"{(suma_wplat_kola_gr / 100.0):,.2f} PLN", "Wpłacone do kasy tego koła", "accent-cyan")
     with c3:
-        render_bento_card(f"KDI Koła ({nazwa_aktywnego_kola})", kdi_global_str, "Rekomendowane: ≤ 1.20", styl_custom=f"color: {kolor_kdi_global}; text-shadow: 0 0 16px {kolor_kdi_global}55;")
+        render_bento_card(f"KDI Koła ({nazwa_aktywnego_kola})", kdi_global_str, "Rekomendowane: ≤ 1.20", styl_custom=f"color: {kolor_kdi_global}; text-shadow: 0 0 16px {kolor_kdi_global};")
     with c4:
         uprawnieni_count = sum(1 for d in dane_przeliczone if d["moze_glosowac"])
         lacznie_czlonkow = len(dane_przeliczone)
         pct_uprawnieni = (uprawnieni_count / lacznie_czlonkow * 100.0) if lacznie_czlonkow > 0 else 0.0
         kolor_uprawnieni = pobierz_kolor_uprawnionych(pct_uprawnieni if lacznie_czlonkow > 0 else None)
-        render_bento_card("Uprawnieni do Głosowania", f"{uprawnieni_count} / {lacznie_czlonkow}", f"{pct_uprawnieni:.1f}% (karencja ≤ 6 msc)", styl_custom=f"color: {kolor_uprawnieni}; text-shadow: 0 0 16px {kolor_uprawnieni}55;")
+        render_bento_card("Uprawnieni do Głosowania", f"{uprawnieni_count} / {lacznie_czlonkow}", f"{pct_uprawnieni:.1f}% (karencja ≤ 6 msc)", styl_custom=f"color: {kolor_uprawnieni}; text-shadow: 0 0 16px {kolor_uprawnieni};")
 
     # Dynamiczne zakładki sterowane przez moze()
     zakladki_nazwy = ["📊 Tabela Zbiorcza", "📈 Profile & Wykresy", "💰 Wpłaty Członków"]

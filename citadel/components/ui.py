@@ -1,26 +1,31 @@
 import streamlit as st
 from rbac import pobierz_etykiete_roli
 
+import re
+
+def _czysc_styl(styl: str) -> str:
+    if not styl:
+        return ""
+    # Usuwamy !important oraz -webkit-text-fill-color, które powodują usunięcie stylu przez DOMPurify
+    s = styl.replace("!important", "").replace("-webkit-text-fill-color", "")
+    # Zamieniamy 8-znakowe hex (#RRGGBBAA) na standardowe 6-znakowe (#RRGGBB) akceptowane przez DOMPurify
+    s = re.sub(r'#([0-9a-fA-F]{6})[0-9a-fA-F]{2}', r'#\1', s)
+    czesci = [c.strip() for c in s.split(";") if c.strip() and ":" in c]
+    return "; ".join(czesci)
+
 def render_bento_card(tytul: str, wartosc: str, podtytul: str, klasa_akcentu: str = "", styl_custom: str = ""):
-    extra_style = ""
-    if styl_custom:
-        style_parts = [s.strip() for s in styl_custom.split(";") if s.strip()]
-        enhanced_parts = []
-        for part in style_parts:
-            if ":" in part:
-                k, v = part.split(":", 1)
-                k = k.strip()
-                v = v.strip().rstrip("!important").strip()
-                enhanced_parts.append(f"{k}: {v} !important")
-                if k == "color":
-                    enhanced_parts.append(f"-webkit-text-fill-color: {v} !important")
-            else:
-                enhanced_parts.append(part)
-        extra_style = f' style="{"; ".join(enhanced_parts)}"'
+    clean_style = _czysc_styl(styl_custom)
+    attr_style = f' style="{clean_style}"' if clean_style else ""
+    
+    if clean_style:
+        wartosc_html = f'<span{attr_style}>{wartosc}</span>'
+    else:
+        wartosc_html = str(wartosc)
+
     st.markdown(f"""
         <div class="bento-card">
             <div class="bento-card-header">{tytul}</div>
-            <div class="bento-card-value {klasa_akcentu}"{extra_style}>{wartosc}</div>
+            <div class="bento-card-value {klasa_akcentu}"{attr_style}>{wartosc_html}</div>
             <div class="bento-card-sub">{podtytul}</div>
         </div>
     """, unsafe_allow_html=True)
