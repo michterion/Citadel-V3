@@ -191,6 +191,12 @@ DARK_THEME_CSS = """
         color: #ffffff !important;
         box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
     }
+    div[data-baseweb="tab-highlight"] {
+        display: none !important;
+    }
+    div[data-baseweb="tab-border"] {
+        background-color: transparent !important;
+    }
     div[data-testid="stForm"] {
         background-color: #141028 !important;
         border: 1px solid #4338ca !important;
@@ -229,6 +235,17 @@ DARK_THEME_CSS = """
         border: 1px solid #6366f1 !important;
         box-shadow: 0 0 25px rgba(99, 102, 241, 0.35) !important;
     }
+    .profile-banner-card {
+        background: #161228;
+        border: 1px solid #282046;
+        border-radius: 12px;
+        padding: 12px 18px;
+        margin-bottom: 18px;
+        display: flex;
+        gap: 24px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
 </style>
 """
 
@@ -236,14 +253,14 @@ MONO_THEME_CSS = """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-    .stApp { background-color: #09090b; color: #f4f4f5; }
+    .stApp { background-color: #141416; color: #f4f4f5; }
     
     .bento-card {
-        background: #141416;
-        border: 1px solid #27272a;
+        background: #1c1c20;
+        border: 1px solid #2e2e34;
         border-radius: 18px;
         padding: 20px;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.45);
         margin-bottom: 20px;
     }
     .bento-card-header {
@@ -266,20 +283,32 @@ MONO_THEME_CSS = """
     .user-pill {
         display: inline-flex;
         align-items: center;
-        background: #18181b;
-        border: 1px solid #3f3f46;
+        background: #202025;
+        border: 1px solid #33333a;
         border-radius: 12px;
         padding: 6px 14px;
         font-size: 0.88rem;
         color: #e4e4e7;
     }
 
+    .profile-banner-card {
+        background: #1c1c20 !important;
+        border: 1px solid #2e2e34 !important;
+        border-radius: 12px;
+        padding: 12px 18px;
+        margin-bottom: 18px;
+        display: flex;
+        gap: 24px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
-        background-color: #121214;
+        background-color: #18181b;
         padding: 6px;
         border-radius: 14px;
-        border: 1px solid #27272a;
+        border: 1px solid #2b2b30;
     }
     .stTabs [data-baseweb="tab"] {
         height: 40px;
@@ -290,20 +319,27 @@ MONO_THEME_CSS = """
         font-weight: 500;
     }
     .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #3f3f46 0%, #27272a 100%) !important;
+        background: linear-gradient(135deg, #35353c 0%, #242429 100%) !important;
         color: #ffffff !important;
-        border: 1px solid #52525b !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45) !important;
+        border: 1px solid #4a4a54 !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
     }
+    div[data-baseweb="tab-highlight"] {
+        display: none !important;
+    }
+    div[data-baseweb="tab-border"] {
+        background-color: transparent !important;
+    }
+
     div[data-testid="stForm"] {
-        background-color: #121215 !important;
-        border: 1px solid #3f3f46 !important;
+        background-color: #1a1a1e !important;
+        border: 1px solid #33333a !important;
         border-radius: 16px !important;
-        box-shadow: 0 0 20px rgba(255, 255, 255, 0.08) !important;
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.04) !important;
     }
     .stTextInput > div > div, .stNumberInput > div > div, .stSelectbox > div > div, .stDateInput > div > div {
-        background-color: #141417 !important;
-        border: 1px solid #27272a !important;
+        background-color: #17171a !important;
+        border: 1px solid #2f2f36 !important;
         border-radius: 10px !important;
         color: #ffffff !important;
         transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
@@ -312,32 +348,62 @@ MONO_THEME_CSS = """
         border-color: #52525b !important;
     }
     .stTextInput > div > div:focus-within, .stNumberInput > div > div:focus-within, .stSelectbox > div > div:focus-within, .stDateInput > div > div:focus-within {
-        border-color: #e4e4e7 !important;
-        box-shadow: 0 0 14px rgba(255, 255, 255, 0.25) !important;
+        border-color: #a1a1aa !important;
+        box-shadow: 0 0 14px rgba(255, 255, 255, 0.15) !important;
     }
     .stButton > button, div[data-testid="stFormSubmitButton"] > button {
-        background: linear-gradient(135deg, #27272a 0%, #18181b 100%) !important;
+        background: linear-gradient(135deg, #323238 0%, #202024 100%) !important;
         color: #ffffff !important;
         border: 1px solid #3f3f46 !important;
         border-radius: 10px !important;
         padding: 9px 22px !important;
         font-weight: 600 !important;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5) !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
         transition: all 0.2s ease !important;
     }
     .stButton > button:hover, div[data-testid="stFormSubmitButton"] > button:hover {
-        background: linear-gradient(135deg, #3f3f46 0%, #27272a 100%) !important;
-        border-color: #71717a !important;
-        box-shadow: 0 0 16px rgba(255, 255, 255, 0.15) !important;
+        background: linear-gradient(135deg, #3f3f46 0%, #27272c 100%) !important;
+        border-color: #5f5f68 !important;
+        box-shadow: 0 0 16px rgba(255, 255, 255, 0.1) !important;
     }
     div[data-testid="stRadio"] label, div[data-testid="stRadio"] label p {
         color: #f4f4f5 !important;
         font-weight: 600 !important;
     }
+    /* Usunięcie fioletowych akcentów z radio buttonów w trybie mono */
+    div[data-testid="stRadio"] [data-testid="stRadioOption"] [class*="e1dm8mpf4"],
+    div[data-testid="stRadio"] [data-testid="stRadioOption"] > label > div:first-child,
+    div[data-testid="stRadio"] [data-testid="stRadioGroup"] [aria-checked="true"] > div {
+        border-color: #71717a !important;
+        background-color: #3f3f46 !important;
+    }
+    div[data-testid="stRadio"] [data-testid="stRadioOption"] [class*="e1dm8mpf5"] {
+        background-color: #ffffff !important;
+    }
+    div[data-testid="stRadio"] [data-testid="stRadioOption"]:hover [class*="e1dm8mpf4"] {
+        border-color: #a1a1aa !important;
+    }
+
+    /* Tabele stDataFrame - eliminacja fioletów i spójność z ciemną szarością */
+    div[data-testid="stDataFrame"] {
+        --gdg-bg-header: #1c1c20 !important;
+        --gdg-bg-header-hovered: #26262b !important;
+        --gdg-bg-header-has-focus: #26262b !important;
+        --gdg-bg-cell: #141416 !important;
+        --gdg-bg-cell-medium: #18181b !important;
+        --gdg-border-color: #2e2e34 !important;
+        --gdg-horizontal-border-color: #27272c !important;
+        --gdg-accent-color: #71717a !important;
+        --gdg-accent-light: rgba(255, 255, 255, 0.08) !important;
+        --gdg-text-header: #d4d4d8 !important;
+        --gdg-text-dark: #f4f4f5 !important;
+        --gdg-text-medium: #a1a1aa !important;
+    }
+
     .login-header-card {
         text-align: center;
-        border: 1px solid #3f3f46 !important;
-        box-shadow: 0 0 25px rgba(255, 255, 255, 0.12) !important;
+        border: 1px solid #33333a !important;
+        box-shadow: 0 0 25px rgba(255, 255, 255, 0.08) !important;
     }
 </style>
 """

@@ -122,7 +122,7 @@ def render_wykres_salda(punkty_x, punkty_saldo):
 
     fig.update_layout(
         paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(21, 18, 38, 0.65)',
+        plot_bgcolor='rgba(0,0,0,0)',
         font=dict(family='Inter, sans-serif'),
         margin=dict(l=20, r=20, t=30, b=25),
         height=360,
@@ -147,7 +147,7 @@ def render_wykres_salda(punkty_x, punkty_saldo):
         ),
         hovermode="x unified",
         hoverlabel=dict(
-            bgcolor='#191430',
+            bgcolor='#1c1c20',
             bordercolor=kolor_akcentu,
             font=dict(color='#ffffff', family='Inter, sans-serif', size=12)
         )
@@ -261,7 +261,7 @@ def render_wykres_kdi(punkty_x, punkty_kdi, kdi_val=None):
 
     fig.update_layout(
         paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(21, 18, 38, 0.65)',
+        plot_bgcolor='rgba(0,0,0,0)',
         font=dict(family='Inter, sans-serif'),
         margin=dict(l=20, r=20, t=30, b=25),
         height=360,
@@ -285,7 +285,7 @@ def render_wykres_kdi(punkty_x, punkty_kdi, kdi_val=None):
         ),
         hovermode="x unified",
         hoverlabel=dict(
-            bgcolor='#191430',
+            bgcolor='#1c1c20',
             bordercolor=kolor_kdi,
             font=dict(color='#ffffff', family='Inter, sans-serif', size=12)
         )
@@ -339,7 +339,7 @@ def render_wykres_slupkowy_kdi(elementy, tytul_x="Wskaźnik KDI"):
 
     fig.update_layout(
         paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(21, 18, 38, 0.65)',
+        plot_bgcolor='rgba(0,0,0,0)',
         font=dict(family='Inter, sans-serif'),
         margin=dict(l=15, r=15, t=25, b=25),
         height=wysokosc,
@@ -357,8 +357,8 @@ def render_wykres_slupkowy_kdi(elementy, tytul_x="Wskaźnik KDI"):
             tickfont=dict(size=12)
         ),
         hoverlabel=dict(
-            bgcolor='#191430',
-            bordercolor='#6366f1',
+            bgcolor='#1c1c20',
+            bordercolor='#3f3f46',
             font=dict(color='#ffffff', family='Inter, sans-serif', size=12)
         )
     )

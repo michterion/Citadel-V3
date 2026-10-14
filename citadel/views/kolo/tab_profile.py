@@ -21,7 +21,7 @@ def render_tab_profile(dane_przeliczone, dzis):
     kolor_glos = "#10b981" if osoba["moze_glosowac"] else "#f43f5e"
     
     st.markdown(f"""
-        <div style="background: #161228; border: 1px solid #282046; border-radius: 12px; padding: 12px 18px; margin-bottom: 18px; display: flex; gap: 24px; align-items: center; flex-wrap: wrap;">
+        <div class="profile-banner-card">
             <div><span style="color: #94a3b8; font-size: 0.85rem;">CZŁONEK:</span> <strong style="color: #ffffff; font-size: 1rem;">{osoba['imie_nazwisko']}</strong></div>
             <div><span style="color: #94a3b8; font-size: 0.85rem;">AKTUALNY KDI:</span> <strong style="color: {kolor_kdi_osoby}; font-size: 1.15rem; text-shadow: 0 0 10px {kolor_kdi_osoby}66;">{osoba['kdi_str']}</strong></div>
             <div><span style="color: #94a3b8; font-size: 0.85rem;">SALDO:</span> <strong style="color: {'#10b981' if osoba['saldo_akt_pln'] >= 0 else '#f43f5e'}; font-size: 1rem;">{osoba['saldo_akt_pln']:.2f} zł</strong></div>
