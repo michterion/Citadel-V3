@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from config import DARK_THEME_CSS, dzis_pl, teraz_utc
+from config import pobierz_motyw_css, dzis_pl, teraz_utc
 from database import (
     init_db_once, db_query, db_execute, db_scalar,
     pobierz_slownik_krajow, pobierz_slownik_regionow, pobierz_liczbe_kol_bez_regionu
@@ -13,7 +13,11 @@ from views.view_kolo import render_view_kolo
 
 pd.set_option('future.no_silent_downcasting', True)
 st.set_page_config(page_title="Citadel for NG", layout="wide", initial_sidebar_state="collapsed")
-st.markdown(DARK_THEME_CSS, unsafe_allow_html=True)
+
+if "tryb_mono" not in st.session_state:
+    st.session_state["tryb_mono"] = False
+
+st.markdown(pobierz_motyw_css(st.session_state["tryb_mono"]), unsafe_allow_html=True)
 
 # Inicjalizacja schematu bazy danych i triggerów
 init_db_once()
@@ -27,7 +31,7 @@ if st.session_state["auth_user"] is None:
     _, c_l2, _ = st.columns([1, 1.2, 1])
     with c_l2:
         st.markdown("""
-            <div class="bento-card" style="text-align: center; border: 1px solid #6366f1; box-shadow: 0 0 25px rgba(99, 102, 241, 0.35);">
+            <div class="bento-card login-header-card">
                 <h2 style="font-weight: 800; margin-bottom: 4px;">CITADEL FOR NG</h2>
                 <div style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 24px;">System Ewidencji Składek i Finansów</div>
             </div>
@@ -54,6 +58,7 @@ if st.session_state["auth_user"] is None:
                         st.rerun()
                     else:
                         st.error("Nieprawidłowy login lub hasło.")
+        st.toggle("🖤 Styl monochromatyczny", key="tryb_mono")
     st.stop()
 
 # CIĄGŁA WERYFIKACJA SESJI I WERSJI SESJI
@@ -115,7 +120,7 @@ kraje_df = pobierz_slownik_krajow()
 mapa_krajow = dict(zip(kraje_df["id"], kraje_df["nazwa"]))
 rola_uzytkownika = zalogowany_uzytkownik["rola"]
 
-col_h1, col_h2, col_h3, col_h4, col_h5 = st.columns([1.8, 0.8, 1.2, 1.4, 0.9])
+col_h1, col_h2, col_h3, col_h4, col_h5 = st.columns([1.7, 0.8, 1.1, 1.4, 1.1])
 with col_h1:
     st.markdown("<h1 style='font-size: 1.6rem; font-weight: 700; margin: 0;'>Citadel for NG</h1>", unsafe_allow_html=True)
 
@@ -169,11 +174,15 @@ with col_h4:
 
 with col_h5:
     render_user_pill(zalogowany_uzytkownik["imie_nazwisko"], rola_uzytkownika)
-    if st.button("Wyloguj", key="btn_logout", use_container_width=True):
-        db_execute("UPDATE uzytkownicy SET ostatnia_aktywnosc = NULL WHERE id = %s", (curr_user_id,))
-        st.session_state["_last_activity_ping"] = None
-        st.session_state["auth_user"] = None
-        st.rerun()
+    c_btn, c_tog = st.columns([1, 1])
+    with c_btn:
+        if st.button("Wyloguj", key="btn_logout", use_container_width=True):
+            db_execute("UPDATE uzytkownicy SET ostatnia_aktywnosc = NULL WHERE id = %s", (curr_user_id,))
+            st.session_state["_last_activity_ping"] = None
+            st.session_state["auth_user"] = None
+            st.rerun()
+    with c_tog:
+        st.toggle("🖤 Mono", key="tryb_mono")
 
 # Powiadomienie o oczekujących wpłatach
 if moze(rola_uzytkownika, "akceptuje_wplaty"):

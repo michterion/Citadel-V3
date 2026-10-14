@@ -224,5 +224,123 @@ DARK_THEME_CSS = """
         color: #f1f5f9 !important;
         font-weight: 600 !important;
     }
+    .login-header-card {
+        text-align: center;
+        border: 1px solid #6366f1 !important;
+        box-shadow: 0 0 25px rgba(99, 102, 241, 0.35) !important;
+    }
 </style>
 """
+
+MONO_THEME_CSS = """
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+    .stApp { background-color: #09090b; color: #f4f4f5; }
+    
+    .bento-card {
+        background: #141416;
+        border: 1px solid #27272a;
+        border-radius: 18px;
+        padding: 20px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+        margin-bottom: 20px;
+    }
+    .bento-card-header {
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #a1a1aa;
+        margin-bottom: 6px;
+    }
+    .bento-card-value { font-size: 1.8rem; font-weight: 700; color: #ffffff; }
+    .bento-card-sub { font-size: 0.8rem; margin-top: 5px; color: #71717a; }
+    
+    /* Dynamiczne kolory akcentów pozostają w 100% żywe i nasycone */
+    .accent-purple { color: #c084fc; }
+    .accent-cyan { color: #38bdf8; }
+    .accent-green { color: #22c55e; }
+    .accent-rose { color: #f43f5e; }
+
+    .user-pill {
+        display: inline-flex;
+        align-items: center;
+        background: #18181b;
+        border: 1px solid #3f3f46;
+        border-radius: 12px;
+        padding: 6px 14px;
+        font-size: 0.88rem;
+        color: #e4e4e7;
+    }
+
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background-color: #121214;
+        padding: 6px;
+        border-radius: 14px;
+        border: 1px solid #27272a;
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 40px;
+        border-radius: 10px;
+        color: #a1a1aa;
+        border: none;
+        padding: 0 16px;
+        font-weight: 500;
+    }
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #3f3f46 0%, #27272a 100%) !important;
+        color: #ffffff !important;
+        border: 1px solid #52525b !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45) !important;
+    }
+    div[data-testid="stForm"] {
+        background-color: #121215 !important;
+        border: 1px solid #3f3f46 !important;
+        border-radius: 16px !important;
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.08) !important;
+    }
+    .stTextInput > div > div, .stNumberInput > div > div, .stSelectbox > div > div, .stDateInput > div > div {
+        background-color: #141417 !important;
+        border: 1px solid #27272a !important;
+        border-radius: 10px !important;
+        color: #ffffff !important;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+    }
+    .stTextInput > div > div:hover, .stNumberInput > div > div:hover, .stSelectbox > div > div:hover, .stDateInput > div > div:hover {
+        border-color: #52525b !important;
+    }
+    .stTextInput > div > div:focus-within, .stNumberInput > div > div:focus-within, .stSelectbox > div > div:focus-within, .stDateInput > div > div:focus-within {
+        border-color: #e4e4e7 !important;
+        box-shadow: 0 0 14px rgba(255, 255, 255, 0.25) !important;
+    }
+    .stButton > button, div[data-testid="stFormSubmitButton"] > button {
+        background: linear-gradient(135deg, #27272a 0%, #18181b 100%) !important;
+        color: #ffffff !important;
+        border: 1px solid #3f3f46 !important;
+        border-radius: 10px !important;
+        padding: 9px 22px !important;
+        font-weight: 600 !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5) !important;
+        transition: all 0.2s ease !important;
+    }
+    .stButton > button:hover, div[data-testid="stFormSubmitButton"] > button:hover {
+        background: linear-gradient(135deg, #3f3f46 0%, #27272a 100%) !important;
+        border-color: #71717a !important;
+        box-shadow: 0 0 16px rgba(255, 255, 255, 0.15) !important;
+    }
+    div[data-testid="stRadio"] label, div[data-testid="stRadio"] label p {
+        color: #f4f4f5 !important;
+        font-weight: 600 !important;
+    }
+    .login-header-card {
+        text-align: center;
+        border: 1px solid #3f3f46 !important;
+        box-shadow: 0 0 25px rgba(255, 255, 255, 0.12) !important;
+    }
+</style>
+"""
+
+def pobierz_motyw_css(tryb_mono: bool = False) -> str:
+    return MONO_THEME_CSS if tryb_mono else DARK_THEME_CSS
