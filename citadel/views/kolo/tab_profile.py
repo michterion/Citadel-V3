@@ -6,23 +6,28 @@ import streamlit as st
 from config import DATA_ODCIECIA, parse_date, pobierz_kolor_kdi
 from database import db_query
 from calculations import oblicz_naliczenia_gr, filtruj_interwal, pobierz_stawke_za_miesiac
-from components.charts import render_wykres_salda, render_wykres_kdi, PLOTLY_CONFIG
+from components.charts import render_wykres_salda, render_wykres_kdi, PLOTLY_CONFIG, czy_jasny_motyw
+from components.ui import render_bento_card
+from celestia import pobierz_kolor_celestia
 
 def render_tab_profile(dane_przeliczone, dzis):
     if not dane_przeliczone:
         st.info("Brak danych do analizy.")
         return
 
-    mapa_osob = {d["id"]: f"{d['imie_nazwisko']} (Saldo: {d['saldo_akt_pln']:.2f} zł, KDI: {d['kdi_str']})" for d in dane_przeliczone}
+    is_light = czy_jasny_motyw()
+    mapa_osob = {d["id"]: f"{d['imie_nazwisko']} (Saldo: {d['saldo_akt_pln']:.2f} zł, KDI: {d['kdi_str']}, Celestia: {d.get('celestia_rating', '—')})" for d in dane_przeliczone}
     wybrany_id = st.selectbox("Wybierz członka do analizy wskaźników", options=list(mapa_osob.keys()), format_func=lambda x: mapa_osob[x])
     osoba = next(item for item in dane_przeliczone if item["id"] == wybrany_id)
     
     kolor_kdi_osoby = pobierz_kolor_kdi(osoba["kdi_val"])
     kolor_glos = "#10b981" if osoba["moze_glosowac"] else "#f43f5e"
+    kolor_celestia = pobierz_kolor_celestia(osoba.get("celestia_rating", "DDD"), is_light)
     
     st.markdown(f"""
         <div class="profile-banner-card">
             <div><span style="color: #94a3b8; font-size: 0.85rem;">CZŁONEK:</span> <strong style="font-size: 1rem;">{osoba['imie_nazwisko']}</strong></div>
+            <div><span style="color: #94a3b8; font-size: 0.85rem;">CELESTIA:</span> <strong style="color: {kolor_celestia}; font-size: 1.15rem; text-shadow: 0 0 10px {kolor_celestia};">{osoba.get('celestia_rating', '—')} ({osoba.get('celestia_score', 0)} pkt)</strong></div>
             <div><span style="color: #94a3b8; font-size: 0.85rem;">AKTUALNY KDI:</span> <strong style="color: {kolor_kdi_osoby}; font-size: 1.15rem; text-shadow: 0 0 10px {kolor_kdi_osoby};">{osoba['kdi_str']}</strong></div>
             <div><span style="color: #94a3b8; font-size: 0.85rem;">SALDO:</span> <strong style="color: {'#22c55e' if osoba['saldo_akt_pln'] >= 0 else '#f43f5e'}; font-size: 1rem;">{osoba['saldo_akt_pln']:.2f} zł</strong></div>
             <div><span style="color: #94a3b8; font-size: 0.85rem;">GŁOSOWANIE:</span> <strong style="color: {kolor_glos}; font-size: 1.05rem; font-weight: 800;">{osoba['glosowanie_str']}</strong></div>
@@ -139,4 +144,46 @@ def render_tab_profile(dane_przeliczone, dzis):
             st.dataframe(hk[["data_korekty", "Delta", "Docelowe", "powod"]], width="stretch", hide_index=True)
         else:
             st.caption("Brak korekt.")
+
+    # SEKCJA CELESTIA — AUDYT DYSCYPLINY W DNIACH GŁOSOWAŃ
+    st.markdown("---")
+    st.markdown("### ⭐ Celestia — Audyt Wiarygodności i Dni Głosowań")
+    st.caption(
+        f"Klasa wiarygodności: **{osoba.get('celestia_nazwa', 'Brak')}** | "
+        f"Score: **{osoba.get('celestia_score', 0)} / 1000 pkt** | "
+        f"{osoba.get('celestia_opis', '—')}"
+    )
+
+    filary = osoba.get("celestia_filary", {})
+    cf1, cf2, cf3, cf4 = st.columns(4)
+    with cf1:
+        vdc_val = filary.get("vdc_score")
+        vdc_text = f"{vdc_val} pkt" if vdc_val is not None else "Brak zebrań"
+        sub_text = f"W oparciu o {filary.get('liczba_glosowan', 0)} głosowań" if vdc_val is not None else "Brak zarejestrowanych zebrań"
+        render_bento_card("Dyscyplina Głosowań (55%)", vdc_text, sub_text, "accent-cyan")
+    with cf2:
+        render_bento_card("Wskaźnik KDI (20%)", f"{filary.get('kdi_score', 0)} pkt", f"KDI: {osoba['kdi_str']}", "accent-green")
+    with cf3:
+        render_bento_card("Bieżące Saldo (15%)", f"{filary.get('saldo_score', 0)} pkt", f"Saldo: {osoba['saldo_akt_pln']:.2f} zł", "accent-purple")
+    with cf4:
+        render_bento_card("Rytm Płatności (10%)", f"{filary.get('rytm_score', 0)} pkt", f"Liczba wpłat: {len(hist_wplaty)}", "accent-rose")
+
+    audyt_glosowan = osoba.get("celestia_audyt_glosowan", [])
+    if audyt_glosowan:
+        st.markdown("#### 🗳️ Historia Dyscypliny na Głosowaniach Koła")
+        st.caption("Ocena salda oraz wpłat w 14-dniowym okienku zapadalności przed każdym terminem głosowania:")
+        df_audyt = pd.DataFrame([
+            {
+                "Data Głosowania": a["data"],
+                "Wydarzenie / Zebranie": a["nazwa"],
+                "Saldo na Dzień Zebrania": f"{a['saldo_pln']:.2f} zł",
+                "Wpłata w Oknie (14 dni)": f"{a['wplata_w_oknie_pln']:.2f} zł",
+                "Ocena (0-100)": f"{a['punkty']} pkt",
+                "Status Zdarzenia": a["status"]
+            }
+            for a in audyt_glosowan
+        ])
+        st.dataframe(df_audyt, width="stretch", hide_index=True)
+    else:
+        st.info("Brak zarejestrowanych terminów głosowań przypadających w trakcie członkostwa tej osoby.")
 

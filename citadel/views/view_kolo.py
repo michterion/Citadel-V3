@@ -19,6 +19,8 @@ from views.kolo.tab_akceptacje import render_tab_akceptacje
 from views.kolo.tab_struktura import render_tab_struktura
 from views.kolo.tab_audyt import render_tab_audyt
 from views.kolo.tab_centauri import render_tab_centauri
+from views.kolo.tab_celestia import render_tab_celestia
+from celestia import przelicz_celestia_dla_calego_kola
 
 def render_view_kolo(zalogowany_uzytkownik, wybrany_kraj_id, wybrany_region_id, nazwa_wybranego_regionu, dzis):
     rola_uzytkownika = zalogowany_uzytkownik["rola"]
@@ -75,6 +77,7 @@ def render_view_kolo(zalogowany_uzytkownik, wybrany_kraj_id, wybrany_region_id, 
     st.caption(f"Aktywna jednostka: **{nazwa_aktywnego_kola}** | Rola: **{badge_rola}** | Czas: **Europe/Warsaw**")
 
     dane_przeliczone, suma_wplat_kola_gr, faktyczna_kasa_kola_gr, suma_wydatkow_gr, suma_korekt_kasy_gr, total_z_gr, total_s_gr = przelicz_finanse_dla_kola(wybrane_kolo_id, dzis)
+    dane_przeliczone = przelicz_celestia_dla_calego_kola(wybrane_kolo_id, dane_przeliczone, dzis)
 
     kdi_global_val = round(total_z_gr / total_s_gr, 2) if total_s_gr > 0 else None
     kdi_global_str = f"{kdi_global_val:.2f}" if kdi_global_val is not None else "Brak danych"
@@ -97,7 +100,7 @@ def render_view_kolo(zalogowany_uzytkownik, wybrany_kraj_id, wybrany_region_id, 
         render_bento_card("Uprawnieni do Głosowania", f"{uprawnieni_count} / {lacznie_czlonkow}", f"{pct_uprawnieni:.1f}% (karencja ≤ 6 msc)", styl_custom=f"color: {kolor_uprawnieni}; text-shadow: 0 0 16px {kolor_uprawnieni};")
 
     # Dynamiczne zakładki sterowane przez moze()
-    zakladki_nazwy = ["📊 Tabela Zbiorcza", "📈 Profile & Wykresy", "💰 Wpłaty Członków"]
+    zakladki_nazwy = ["📊 Tabela Zbiorcza", "📈 Profile & Wykresy", "⭐ Celestia & Głosowania", "💰 Wpłaty Członków"]
     if moze(rola_uzytkownika, "reczne_naliczenia"):
         zakladki_nazwy.append("📝 Ręczne Naliczenia")
     zakladki_nazwy.append("💳 Kasa Koła & Wydatki")
@@ -129,7 +132,11 @@ def render_view_kolo(zalogowany_uzytkownik, wybrany_kraj_id, wybrany_region_id, 
     with tab_map["📈 Profile & Wykresy"]:
         render_tab_profile(dane_przeliczone, dzis)
 
-    # 3. ZARZĄDZANIE WPŁATAMI
+    # 3. CELESTIA & GŁOSOWANIA
+    with tab_map["⭐ Celestia & Głosowania"]:
+        render_tab_celestia(wybrane_kolo_id, dane_przeliczone, curr_user_id, dzis)
+
+    # 4. ZARZĄDZANIE WPŁATAMI
     with tab_map["💰 Wpłaty Członków"]:
         render_tab_wplaty(dane_przeliczone, wybrane_kolo_id, rola_uzytkownika, curr_user_id)
 

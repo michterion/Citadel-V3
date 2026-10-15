@@ -170,6 +170,16 @@ CREATE TABLE IF NOT EXISTS audit_log (
     nowe_dane JSONB,
     zmieniono_o TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS terminy_glosowan (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    kolo_id BIGINT NOT NULL REFERENCES kola(id) ON DELETE CASCADE,
+    data_glosowania DATE NOT NULL,
+    nazwa TEXT NOT NULL,
+    opis TEXT,
+    waga NUMERIC(3,2) NOT NULL DEFAULT 1.0,
+    utworzono_o TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    utworzono_przez BIGINT REFERENCES uzytkownicy(id) ON DELETE SET NULL
+);
 CREATE INDEX IF NOT EXISTS idx_wplaty_czlonek_data ON wplaty(czlonek_id, data_wplaty);
 CREATE INDEX IF NOT EXISTS idx_wplaty_kolo_data ON wplaty(kolo_id, data_wplaty);
 CREATE INDEX IF NOT EXISTS idx_czlonkowie_kolo ON czlonkowie(kolo_id);
@@ -181,6 +191,7 @@ CREATE INDEX IF NOT EXISTS idx_kola_region ON kola(region_id);
 CREATE INDEX IF NOT EXISTS idx_kola_kraj ON kola(kraj_id);
 CREATE INDEX IF NOT EXISTS idx_regiony_kraj ON regiony(kraj_id);
 CREATE INDEX IF NOT EXISTS idx_wplaty_oczekujace_kolo ON wplaty_oczekujace(kolo_id);
+CREATE INDEX IF NOT EXISTS idx_terminy_glosowan_kolo_data ON terminy_glosowan(kolo_id, data_glosowania);
 """
 
 @st.cache_resource(show_spinner=False)
@@ -338,6 +349,16 @@ def init_db_once():
                     nowe_dane JSONB,
                     zmieniono_o TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
+                CREATE TABLE IF NOT EXISTS terminy_glosowan (
+                    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                    kolo_id BIGINT NOT NULL REFERENCES kola(id) ON DELETE CASCADE,
+                    data_glosowania DATE NOT NULL,
+                    nazwa TEXT NOT NULL,
+                    opis TEXT,
+                    waga NUMERIC(3,2) NOT NULL DEFAULT 1.0,
+                    utworzono_o TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    utworzono_przez BIGINT REFERENCES uzytkownicy(id) ON DELETE SET NULL
+                );
                 CREATE INDEX IF NOT EXISTS idx_audit_log_tabela_czas ON audit_log(tabela, zmieniono_o DESC);
             """)
 
@@ -359,6 +380,7 @@ def init_db_once():
                 CREATE INDEX IF NOT EXISTS idx_kola_kraj ON kola(kraj_id);
                 CREATE INDEX IF NOT EXISTS idx_regiony_kraj ON regiony(kraj_id);
                 CREATE INDEX IF NOT EXISTS idx_wplaty_oczekujace_kolo ON wplaty_oczekujace(kolo_id);
+                CREATE INDEX IF NOT EXISTS idx_terminy_glosowan_kolo_data ON terminy_glosowan(kolo_id, data_glosowania);
             """)
 
             # PRZYWRÓCENIE TRIGGERA AUDYTU
@@ -424,7 +446,7 @@ def init_db_once():
                     tabele TEXT[] := ARRAY[
                         'kraje', 'regiony', 'kola', 'uzytkownicy', 'czlonkowie', 
                         'wplaty', 'wplaty_oczekujace', 'naliczenia_reczne', 
-                        'korekty', 'wydatki', 'korekty_kasy'
+                        'korekty', 'wydatki', 'korekty_kasy', 'terminy_glosowan'
                     ];
                 BEGIN
                     FOREACH t IN ARRAY tabele LOOP
@@ -604,7 +626,7 @@ def generuj_zrzut_bazy_sql():
     
     tabele_parent_to_child = [
         "kraje", "regiony", "kola", "uzytkownicy", "czlonkowie", 
-        "wplaty", "wplaty_oczekujace", "naliczenia_reczne", "korekty", "wydatki", "korekty_kasy", "audit_log"
+        "wplaty", "wplaty_oczekujace", "naliczenia_reczne", "korekty", "wydatki", "korekty_kasy", "terminy_glosowan", "audit_log"
     ]
     tabele_child_to_parent = tabele_parent_to_child[::-1]
 
@@ -662,3 +684,28 @@ def generuj_zrzut_bazy_sql():
 
     file_size_kb = os.path.getsize(filepath) / 1024.0
     return filepath, filename, file_size_kb, "Citadel Python Engine (FK-safe + RBAC)"
+
+def pobierz_terminy_glosowan_kola(kolo_id: int):
+    """Pobiera wszystkie zarejestrowane terminy głosowań / wymagalności dla danego koła."""
+    return db_query("""
+        SELECT tg.id, tg.kolo_id, tg.data_glosowania, tg.nazwa, tg.opis, tg.waga, tg.utworzono_o, tg.utworzono_przez,
+               u.imie_nazwisko as dodal_imie
+        FROM terminy_glosowan tg
+        LEFT JOIN uzytkownicy u ON tg.utworzono_przez = u.id
+        WHERE tg.kolo_id = %s
+        ORDER BY tg.data_glosowania DESC, tg.id DESC
+    """, (kolo_id,))
+
+def dodaj_termin_glosowania(kolo_id: int, data_glosowania, nazwa: str, opis: str = None, waga: float = 1.0, user_id: int = None):
+    """Rejestruje nowy termin głosowania dla koła jako punkt zapadalności ratingu Celestia."""
+    db_execute("""
+        INSERT INTO terminy_glosowan (kolo_id, data_glosowania, nazwa, opis, waga, utworzono_przez)
+        VALUES (%s, %s, %s, %s, %s, %s)
+    """, (kolo_id, data_glosowania, nazwa.strip(), opis.strip() if opis else None, float(waga), user_id))
+
+def usun_termin_glosowania(termin_id: int, kolo_id: int):
+    """Usuwa termin głosowania dla danego koła."""
+    db_execute("""
+        DELETE FROM terminy_glosowan 
+        WHERE id = %s AND kolo_id = %s
+    """, (termin_id, kolo_id))
