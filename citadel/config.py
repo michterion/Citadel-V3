@@ -136,6 +136,10 @@ DARK_THEME_CSS = """
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     .stApp { background-color: #0b0914; color: #f1f5f9; }
     
+    header[data-testid="stHeader"] {
+        background-color: transparent !important;
+    }
+    
     .bento-card {
         background: #151226;
         border: 1px solid #262040;
@@ -260,8 +264,9 @@ DARK_THEME_CSS = """
         flex-wrap: wrap;
     }
     div[data-testid="stDataFrame"] {
-        border: 1px solid #282046 !important;
+        border: 1px solid #3b2d6b !important;
         border-radius: 12px !important;
+        box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15) !important;
     }
 </style>
 """
@@ -271,6 +276,10 @@ MONO_THEME_CSS = """
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     .stApp { background-color: #141416; color: #f4f4f5; }
+    
+    header[data-testid="stHeader"] {
+        background-color: transparent !important;
+    }
     
     .bento-card {
         background: #1c1c20;
@@ -423,6 +432,7 @@ MONO_THEME_CSS = """
     div[data-testid="stDataFrame"] {
         border: 1px solid #2e2e34 !important;
         border-radius: 12px !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35) !important;
     }
 
     .login-header-card {
