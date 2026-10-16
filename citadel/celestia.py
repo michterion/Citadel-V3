@@ -13,6 +13,57 @@ def _num(v, d):
 # =========================================================================
 # DEFINICJA SKALI RATINGOWEJ CELESTIA (AAA -> DDD)
 # =========================================================================
+# DEFINICJA SKALI RATINGOWEJ CELESTIA (AAA -> DDD) W OPARCIU O SKALĘ KDI
+# =========================================================================
+
+# Progi interpolacji barw oparte na kanonicznej skali KDI (Emerald -> Light Green -> White -> Yellow -> Orange -> Red -> Pink -> Blue -> Purple)
+KDI_CELESTIA_STOPS_DARK = [
+    (1000.0, (22, 130, 60)),   # Szmaragd
+    (900.0,  (74, 222, 128)),  # Jasna zieleń
+    (800.0,  (255, 255, 255)), # Biel
+    (700.0,  (250, 204, 21)),  # Żółty
+    (550.0,  (249, 115, 22)),  # Pomarańczowy
+    (400.0,  (239, 68, 68)),   # Czerwony
+    (250.0,  (236, 72, 153)),  # Różowy
+    (100.0,  (59, 130, 246)),  # Niebieski
+    (0.0,    (168, 85, 247)),  # Fioletowy
+]
+
+KDI_CELESTIA_STOPS_LIGHT = [
+    (1000.0, (21, 128, 61)),   # Głęboki szmaragd
+    (900.0,  (22, 163, 74)),   # Zieleń
+    (800.0,  (30, 41, 59)),    # Ciemny grafit (kontrast na jasnym tle)
+    (700.0,  (202, 138, 4)),   # Ciemne złoto
+    (550.0,  (194, 65, 12)),   # Ciemny pomarańcz
+    (400.0,  (185, 28, 28)),   # Ciemna czerwień
+    (250.0,  (190, 24, 93)),   # Ciemny róż
+    (100.0,  (29, 78, 216)),   # Ciemny błękit
+    (0.0,    (126, 34, 206)),  # Ciemny fiolet
+]
+
+
+def interpoluj_kolor_skali_kdi(val: float, is_light: bool = False) -> str:
+    """Liniowa interpolacja koloru w kanonicznej skali KDI (od 0 do 1000 pkt)."""
+    stops = KDI_CELESTIA_STOPS_LIGHT if is_light else KDI_CELESTIA_STOPS_DARK
+    val = max(0.0, min(1000.0, float(val)))
+    if val >= stops[0][0]:
+        r, g, b = stops[0][1]
+        return f"#{r:02x}{g:02x}{b:02x}"
+    if val <= stops[-1][0]:
+        r, g, b = stops[-1][1]
+        return f"#{r:02x}{g:02x}{b:02x}"
+
+    for i in range(len(stops) - 1):
+        v1, c1 = stops[i]
+        v2, c2 = stops[i + 1]
+        if v2 <= val <= v1:
+            t = (val - v2) / (v1 - v2)
+            r = int(c2[0] + t * (c1[0] - c2[0]))
+            g = int(c2[1] + t * (c1[1] - c2[1]))
+            b = int(c2[2] + t * (c1[2] - c2[2]))
+            return f"#{r:02x}{g:02x}{b:02x}"
+    return "#000000" if is_light else "#ffffff"
+
 
 POZIOMY_CELESTIA = [
     {
@@ -20,8 +71,8 @@ POZIOMY_CELESTIA = [
         "nazwa": "Prime Apex",
         "min_score": 950,
         "max_score": 1000,
-        "kolor_dark": "#10b981",      # Szmaragdowy neon
-        "kolor_light": "#059669",
+        "kolor_dark": "#23994d",      # Głęboki szmaragd KDI
+        "kolor_light": "#158840",
         "opis": "Wzorcowa dyscyplina finansowa. Stała nadpłata lub regularne wpłaty z wyprzedzeniem przed każdym terminem głosowania. Zero zaległości."
     },
     {
@@ -29,8 +80,8 @@ POZIOMY_CELESTIA = [
         "nazwa": "High Grade",
         "min_score": 880,
         "max_score": 949,
-        "kolor_dark": "#22c55e",      # Żywa zieleń
-        "kolor_light": "#16a34a",
+        "kolor_dark": "#42d075",      # Żywa zieleń KDI
+        "kolor_light": "#159d48",
         "opis": "Bardzo wysoka wiarygodność. Składki uregulowane przed terminami głosowań. Sporadyczne, minimalne poślizgi bieżące."
     },
     {
@@ -38,8 +89,8 @@ POZIOMY_CELESTIA = [
         "nazwa": "Upper Medium",
         "min_score": 800,
         "max_score": 879,
-        "kolor_dark": "#34d399",      # Miętowy
-        "kolor_light": "#0d9488",
+        "kolor_dark": "#b6f1cc",      # Miętowa biel / srebrzysty KDI
+        "kolor_light": "#1a5941",
         "opis": "Solidny płatnik. Regularnie posiada uprawnienia do głosu na zebraniach. Zazwyczaj reguluje zaległość w okienku przed samym głosowaniem."
     },
     {
@@ -47,8 +98,8 @@ POZIOMY_CELESTIA = [
         "nazwa": "Good Standing",
         "min_score": 700,
         "max_score": 799,
-        "kolor_dark": "#38bdf8",      # Błękit
-        "kolor_light": "#0284c7",
+        "kolor_dark": "#fce58a",      # Pastelowy żółty KDI
+        "kolor_light": "#74591f",
         "opis": "Dobra wiarygodność. Spłaca zaległości przed głosowaniami, rzadziej w samym dniu zebrania. Wskaźniki w normie statutowej."
     },
     {
@@ -56,8 +107,8 @@ POZIOMY_CELESTIA = [
         "nazwa": "Moderate",
         "min_score": 600,
         "max_score": 699,
-        "kolor_dark": "#fbbf24",      # Złoty / Amber
-        "kolor_light": "#d97706",
+        "kolor_dark": "#f9ae15",      # Złocisty bursztyn KDI
+        "kolor_light": "#c77106",
         "opis": "Umiarkowana regularność. W niektórych głosowaniach korzysta z marginesu karencji (zadłużenie do 6 msc). Spłaty zrywami."
     },
     {
@@ -65,8 +116,8 @@ POZIOMY_CELESTIA = [
         "nazwa": "Vulnerable",
         "min_score": 500,
         "max_score": 599,
-        "kolor_dark": "#f59e0b",      # Pomarańczowy
-        "kolor_light": "#b45309",
+        "kolor_dark": "#f97316",      # Pomarańczowy KDI
+        "kolor_light": "#c2410c",
         "opis": "Wrażliwa dyscyplina. Częste balansowanie na granicy utraty prawa głosu. Wpłaty dopiero po wezwaniach lub z poślizgiem."
     },
     {
@@ -74,8 +125,8 @@ POZIOMY_CELESTIA = [
         "nazwa": "Substantial Risk",
         "min_score": 380,
         "max_score": 499,
-        "kolor_dark": "#f87171",      # Jasny czerwony
-        "kolor_light": "#dc2626",
+        "kolor_dark": "#f15037",      # Koralowy czerwony KDI
+        "kolor_light": "#bb2517",
         "opis": "Podwyższone ryzyko. Wejścia w dni głosowań z zadłużeniem przekraczającym karencję (utrata prawa głosu). Długie okresy bierności."
     },
     {
@@ -83,8 +134,8 @@ POZIOMY_CELESTIA = [
         "nazwa": "Extremely Speculative",
         "min_score": 260,
         "max_score": 379,
-        "kolor_dark": "#ef4444",      # Czerwień
-        "kolor_light": "#b91c1c",
+        "kolor_dark": "#ed4671",      # Ciemny róż KDI
+        "kolor_light": "#bb193e",
         "opis": "Krytyczna niespłacalność. Chroniczne ignorowanie terminów zebrań i głosowań. Rzadkie i cząstkowe spłaty."
     },
     {
@@ -92,8 +143,8 @@ POZIOMY_CELESTIA = [
         "nazwa": "Near Default",
         "min_score": 150,
         "max_score": 259,
-        "kolor_dark": "#e11d48",      # Karmin
-        "kolor_light": "#9f1239",
+        "kolor_dark": "#b15bb8",      # Purpurowy róż / Magenta KDI
+        "kolor_light": "#882a86",
         "opis": "Zadłużenie roczne (ok. 8–12 msc długu, ~60–100 zł). Świeża lub utrwalona utrata praw głosu na zebraniach."
     },
     {
@@ -101,8 +152,8 @@ POZIOMY_CELESTIA = [
         "nazwa": "Insolvency Grade 1",
         "min_score": 90,
         "max_score": 149,
-        "kolor_dark": "#dc2626",      # Czerwień / Bordo
-        "kolor_light": "#991b1b",
+        "kolor_dark": "#527ae9",      # Niebieski KDI
+        "kolor_light": "#3246c7",
         "opis": "Głęboka niewypłacalność (ok. 12–18 msc długu, ~100–160 zł). Brak wpłat na zebrania od ponad roku."
     },
     {
@@ -110,8 +161,8 @@ POZIOMY_CELESTIA = [
         "nazwa": "Insolvency Grade 2",
         "min_score": 40,
         "max_score": 89,
-        "kolor_dark": "#991b1b",      # Ciemny karmin / Kasztan
-        "kolor_light": "#7f1d1d",
+        "kolor_dark": "#6172f6",      # Błękitno-fioletowy / Indygo KDI
+        "kolor_light": "#3e3ed4",
         "opis": "Wieloletnia niewypłacalność (ok. 18–26 msc długu, ~160–250 zł). Utrwalony, dwuletni brak wpłat i kontaktu."
     },
     {
@@ -119,8 +170,8 @@ POZIOMY_CELESTIA = [
         "nazwa": "Terminal Default",
         "min_score": 0,
         "max_score": 39,
-        "kolor_dark": "#7f1d1d",      # Mroczny brąz / bordowy
-        "kolor_light": "#450a0a",
+        "kolor_dark": "#925ef6",      # Głęboki fiolet KDI
+        "kolor_light": "#6a2ad0",
         "opis": "Całkowity default (> 28–36 msc długu, > 350–450 zł). Członek całkowicie nieaktywny, zero wpłat w historii."
     }
 ]
@@ -134,12 +185,22 @@ def pobierz_definicje_ratingu(score: int) -> dict:
     return POZIOMY_CELESTIA[-1]
 
 def pobierz_kolor_celestia(rating_kod_lub_score, is_light: bool = False) -> str:
-    """Zwraca kolor heksadecymalny dla zadanego ratingu lub wyniku punktowego."""
-    if isinstance(rating_kod_lub_score, (int, float)):
-        def_r = pobierz_definicje_ratingu(int(rating_kod_lub_score))
-        return def_r["kolor_light"] if is_light else def_r["kolor_dark"]
+    """Zwraca kolor heksadecymalny w skali KDI dla zadanego ratingu lub wyniku punktowego (0-1000)."""
+    if rating_kod_lub_score is None:
+        return "#64748b"
 
-    kod = str(rating_kod_lub_score).strip().upper()
+    if isinstance(rating_kod_lub_score, (int, float)):
+        return interpoluj_kolor_skali_kdi(rating_kod_lub_score, is_light)
+
+    tekst = str(rating_kod_lub_score).strip()
+    tekst_czysty = tekst.replace(" pkt", "").replace("pkt", "").strip()
+    try:
+        val = float(tekst_czysty)
+        return interpoluj_kolor_skali_kdi(val, is_light)
+    except ValueError:
+        pass
+
+    kod = tekst.upper()
     for p in POZIOMY_CELESTIA:
         if p["kod"] == kod:
             return p["kolor_light"] if is_light else p["kolor_dark"]

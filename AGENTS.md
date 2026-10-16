@@ -92,6 +92,10 @@ Ten plik stanowi trwałą pamięć projektu dla asystentów AI (Antigravity). Za
 6. **Bezpieczne Parsowanie Kolumn SQL / Pandas**:
    * Zawsze stosuj helper `_num(v, d): return d if v is None or pd.isna(v) else v` przy odczytywaniu kolumn z tabeli `terminy_glosowan` (`dni_zbiorki_przed`, `dni_wymagalnosci_po`, `waga`), aby zapobiec `ValueError` przy wartościach `NaN`.
    * Importy parametrów stawek (`pobierz_parametr`) muszą znajdować się na górze modułów, bez cichego tłumienia błędów `except Exception: pass`.
+7. **Spójność Barwna ze Skalą KDI**:
+   * Zgodnie z zasadą spójności UI, Celestia nie korzysta z odrębnej palety barw, lecz bazuje na kanonicznej skali gradientu KDI / Uprawnieni:
+     Szmaragd (`1000 pkt`) → Jasna Zieleń (`900 pkt`) → Biel/Srebro (`800 pkt`) → Żółty (`700 pkt`) → Pomarańczowy (`550 pkt`) → Czerwony (`400 pkt`) → Różowy (`250 pkt`) → Błękitny (`100 pkt`) → Fioletowy (`0 pkt`).
+   * Funkcja `pobierz_kolor_celestia` płynnie interpoluje punkty 0–1000 wzdłuż krzywej KDI lub zwraca barwę przypisaną do kodu klasy wiarygodności, z zachowaniem wysokiego kontrastu dla jasnego motywu.
 
 ---
 

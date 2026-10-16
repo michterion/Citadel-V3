@@ -38,7 +38,21 @@ def test_pobierz_definicje_ratingu_prog():
     assert pobierz_definicje_ratingu(0)["kod"] == "DDD"
 
 def test_pobierz_kolor_celestia():
-    kolor_aaa = pobierz_kolor_celestia(980, is_light=False)
-    assert kolor_aaa.startswith("#")
+    # 1000 pkt to szmaragd KDI (#16823c)
+    kolor_top = pobierz_kolor_celestia(1000, is_light=False)
+    assert kolor_top == "#16823c"
+
+    # 0 pkt to głęboki fiolet KDI (#a855f7)
+    kolor_bottom = pobierz_kolor_celestia(0, is_light=False)
+    assert kolor_bottom == "#a855f7"
+
+    # Obsługa stringów z jednostką "pkt"
+    kolor_string_pkt = pobierz_kolor_celestia("1000 pkt", is_light=False)
+    assert kolor_string_pkt == "#16823c"
+
+    # Kody ratingowe z POZIOMY_CELESTIA
+    kolor_aaa = pobierz_kolor_celestia("AAA", is_light=False)
+    assert kolor_aaa == "#23994d"
     kolor_ddd_light = pobierz_kolor_celestia("DDD", is_light=True)
-    assert kolor_ddd_light.startswith("#")
+    assert kolor_ddd_light == "#6a2ad0"
+

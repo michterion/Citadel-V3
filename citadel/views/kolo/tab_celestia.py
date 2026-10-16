@@ -58,7 +58,7 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
             )
         with col_c2:
             pct_prime = (liczba_prime / total_czlonkow * 100) if total_czlonkow > 0 else 0
-            kolor_prime = "#16a34a" if is_light else "#22c55e"
+            kolor_prime = pobierz_kolor_celestia("AA", is_light)
             render_bento_card(
                 "Klasa Prime (AAA — A)",
                 f"{liczba_prime} / {total_czlonkow}",
@@ -67,7 +67,7 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
             )
         with col_c3:
             pct_med = (liczba_medium / total_czlonkow * 100) if total_czlonkow > 0 else 0
-            kolor_med = "#0284c7" if is_light else "#38bdf8"
+            kolor_med = pobierz_kolor_celestia("BB", is_light)
             render_bento_card(
                 "Klasa Średnia (BBB — B)",
                 f"{liczba_medium} / {total_czlonkow}",
@@ -76,7 +76,7 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
             )
         with col_c4:
             pct_risk = (liczba_risk / total_czlonkow * 100) if total_czlonkow > 0 else 0
-            kolor_risk = "#dc2626" if is_light else "#ef4444"
+            kolor_risk = pobierz_kolor_celestia("CCC", is_light)
             render_bento_card(
                 "Zagrożeni (CCC — DDD)",
                 f"{liczba_risk} / {total_czlonkow}",
