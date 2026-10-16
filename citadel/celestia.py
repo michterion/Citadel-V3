@@ -512,7 +512,7 @@ def oblicz_rating_celestia_dla_czlonka(
             saldo_score = 250
         else:
             # Liniowe wygaszanie od 6 do 36 miesięcy (twarde zero dopiero po 36 msc długu)
-            saldo_score = max(0, int(round(200 - (m_dlug - 6.0) * (200 / 30.0))))
+            saldo_score = max(0, int(round(250 - (m_dlug - 6.0) * (250 / 30.0))))
 
     # ---------------------------------------------------------------------
     # FILAR 4: Rytm i Regularność Wpłat - Waga: 5% (Model Zbiórek Kwartalnych)
@@ -524,7 +524,8 @@ def oblicz_rating_celestia_dla_czlonka(
     # 1. Bazowa kadencja wpłat: model oparty na zbieraniu kwartalnym
     # W kole zbieramy składki kwartalnie, więc płacenie kwartalne (średnio ≤ 105 dni) daje pełne 1000 pkt.
     if liczba_wplat == 0:
-        kadencja_score = 1000 if (dane_czlonka.get("naliczone_gr", 0) == 0 and saldo_akt_gr >= 0) else 50
+        # Brak wpłat w historii: brak wypracowanego rytmu płatniczego (nie przyznajemy 1000 pkt za brak danych/brak wpłat)
+        kadencja_score = 50
         srednio_dni_na_wplate = None
     else:
         srednio_dni_na_wplate = staz_dni / liczba_wplat

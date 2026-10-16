@@ -84,12 +84,13 @@ Ten plik stanowi trwałą pamięć projektu dla asystentów AI (Antigravity). Za
    * **Bieżące Saldo i Karencja**: **20%** — stały bezpiecznik stanu konta:
      * `saldo_akt_gr > 0` (nadpłata): **1000 pkt**.
      * `saldo_akt_gr == 0` (stan zerowy, brak zaległości): **900 pkt**.
-     * Liniowe wygaszanie punktów salda od 6 do 36 miesięcy zaległości (twarde zero dopiero po 36 msc długu).
+     * Liniowe wygaszanie punktów salda od 6 do 36 miesięcy zaległości z bazą 250 pkt: `max(0, round(250 - (m_dlug - 6.0) * (250 / 30.0)))` (twarde zero dopiero po 36 msc długu, ciągłość z progiem $\le 6$ msc).
    * **Wskaźnik Pokrycia KDI**: **10%** — bilans wpłat do naliczeń.
    * **Rytm i Regularność Wpłat**: **5%** — **zorientowany na model kwartalny**:
      * Wpłaty co kwartał (średnio do 105 dni na wpłatę) dają wzorcowe **1000 pkt** (zamiast sztucznie zaniżanych 850 pkt).
      * Jeśli koło zarejestrowało zbiórki kwartalne (`KWARTALNY`), filar łączy realizację wyznaczonych zbiórek kwartalnych (60%) z ogólną kadencją wpłat (40%).
      * Jeśli koło nie ogłaszało jeszcze zbiórek kwartalnych, ocena bazuje w 100% na ogólnej kadencji kwartalnej.
+     * Brak jakichkolwiek wpłat w historii (`liczba_wplat == 0`): minimalna ocena kadencji **50 pkt** (brak wyrobionego rytmu wpłat; brak naliczeń lub brak wpłat nie może dawać 1000 pkt).
 4. **Dynamiczna Terminowość w Oknie Zbiórki i Żelazna Reguła AAA**:
    * **Dynamiczna skala punktowa w oknie zbiórki**:
      * Stała nadpłata przed zbiórką (`saldo_na_glos_gr - wplaty_w_oknie_gr >= 0`): **1000 pkt**.

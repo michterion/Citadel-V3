@@ -300,5 +300,79 @@ def test_zasada_zelazna_brak_aaa_bez_nadplaty():
     assert res_z["rating"] == "AAA"
 
 
+def test_wygaszanie_salda_dla_dluznikow_baza_250():
+    from datetime import date
+
+    import pandas as pd
+    from celestia import oblicz_rating_celestia_dla_czlonka
+
+    dzis = date(2026, 10, 1)
+
+    # 1. Członek z długiem 6 miesięcy (stawka 600 gr/msc, dług -3600 gr) -> dokładnie 250 pkt
+    dane_6msc = {
+        "data_wst": date(2024, 1, 1),
+        "data_ur": date(2008, 1, 1),
+        "reczny_parametr": "B",
+        "saldo_start_gr": -3600,
+        "saldo_akt_gr": -3600,
+        "naliczone_gr": 3600,
+        "kdi_val": 2.0,
+    }
+    res_6msc = oblicz_rating_celestia_dla_czlonka(1, dane_6msc, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), dzis)
+    assert res_6msc["filary"]["saldo_score"] == 250
+
+    # 2. Członek z długiem 18 miesięcy (dług -10800 gr): 250 - (18-6) * (250/30) = 250 - 100 = 150 pkt
+    dane_18msc = {
+        "data_wst": date(2024, 1, 1),
+        "data_ur": date(2008, 1, 1),
+        "reczny_parametr": "B",
+        "saldo_start_gr": -10800,
+        "saldo_akt_gr": -10800,
+        "naliczone_gr": 10800,
+        "kdi_val": 3.0,
+    }
+    res_18msc = oblicz_rating_celestia_dla_czlonka(2, dane_18msc, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), dzis)
+    assert res_18msc["filary"]["saldo_score"] == 150
+
+    # 3. Członek z długiem 24 miesiące (dług -14400 gr): 250 - (24-6) * (250/30) = 250 - 150 = 100 pkt
+    dane_24msc = {
+        "data_wst": date(2024, 1, 1),
+        "data_ur": date(2008, 1, 1),
+        "reczny_parametr": "B",
+        "saldo_start_gr": -14400,
+        "saldo_akt_gr": -14400,
+        "naliczone_gr": 14400,
+        "kdi_val": 4.0,
+    }
+    res_24msc = oblicz_rating_celestia_dla_czlonka(3, dane_24msc, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), dzis)
+    assert res_24msc["filary"]["saldo_score"] == 100
+
+
+def test_brak_wplat_kadencja_score_50():
+    from datetime import date
+
+    import pandas as pd
+    from celestia import oblicz_rating_celestia_dla_czlonka
+
+    dzis = date(2026, 10, 1)
+
+    # Nowy członek bez wpłat w historii i zerowych naliczeniach nie może dostać 1000 pkt za rytm
+    nowy_czlonek = {
+        "data_wst": date(2026, 9, 25),
+        "data_ur": date(2005, 1, 1),
+        "reczny_parametr": "M",
+        "saldo_start_gr": 0,
+        "saldo_akt_gr": 0,
+        "naliczone_gr": 0,
+        "kdi_val": None,
+    }
+
+    res = oblicz_rating_celestia_dla_czlonka(1, nowy_czlonek, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), dzis)
+    # Brak wpłat w historii daje minimalny scoring kadencji 50 pkt (brak wyrobionego rytmu wpłat)
+    assert res["filary"]["rytm_score"] == 50
+    assert res["filary"]["kadencja_dni"] is None
+
+
+
 
 
