@@ -56,3 +56,40 @@ def test_pobierz_kolor_celestia():
     kolor_ddd_light = pobierz_kolor_celestia("DDD", is_light=True)
     assert kolor_ddd_light == "#6a2ad0"
 
+
+def test_poslizg_max_3_dni():
+    from datetime import date
+
+    import pandas as pd
+    from celestia import oblicz_rating_celestia_dla_czlonka
+
+    dane_czl = {
+        "data_wst": date(2026, 1, 1),
+        "data_ur": date(2000, 1, 1),
+        "reczny_parametr": "M",
+        "saldo_start_gr": -600,  # 1 msc długu
+        "saldo_akt_gr": -600,
+        "naliczone_gr": 0,
+        "kdi_val": None,
+    }
+
+    # Zebranie 2026-10-10, skonfigurowany poślizg: 3 dni
+    terminy_df = pd.DataFrame([{
+        "id": 1,
+        "data_glosowania": date(2026, 10, 10),
+        "dni_zbiorki_przed": 14,
+        "dni_wymagalnosci_po": 3,
+        "waga": 1.0,
+        "nazwa": "Zebranie"
+    }])
+
+    # 1. Wpłata 2 dni po zebraniu (2026-10-12) - mieści się w poślizgu (<= 3 dni) -> 90 pkt
+    wplaty_2dni = pd.DataFrame([{"data_wplaty": date(2026, 10, 12), "kwota_gr": 600}])
+    res_2dni = oblicz_rating_celestia_dla_czlonka(1, dane_czl, terminy_df, wplaty_2dni, pd.DataFrame(), pd.DataFrame(), date(2026, 10, 15))
+    assert res_2dni["audyt_glosowan"][0]["punkty"] == 90
+
+    # 2. Wpłata 4 dni po zebraniu (2026-10-14) - poślizg wygasł (max 3 dni) -> 80 pkt (brak uznania poślizgu)
+    wplaty_4dni = pd.DataFrame([{"data_wplaty": date(2026, 10, 14), "kwota_gr": 600}])
+    res_4dni = oblicz_rating_celestia_dla_czlonka(1, dane_czl, terminy_df, wplaty_4dni, pd.DataFrame(), pd.DataFrame(), date(2026, 10, 15))
+    assert res_4dni["audyt_glosowan"][0]["punkty"] == 80
+

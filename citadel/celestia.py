@@ -271,12 +271,9 @@ def oblicz_rating_celestia_dla_czlonka(
                 dni_przed = int(_num(row_g.get("dni_zbiorki_przed"), 14))
                 d_od = d_glos - timedelta(days=dni_przed)
 
-            # Dynamiczny ostateczny termin wymagalności
-            if pd.notna(row_g.get("data_wymagalnosci_do")):
-                d_do = parse_date(row_g["data_wymagalnosci_do"])
-            else:
-                dni_po = int(_num(row_g.get("dni_wymagalnosci_po"), 0))
-                d_do = d_glos + timedelta(days=dni_po)
+            # Dynamiczny termin poślizgu (maksymalnie 3 dni po zebraniu)
+            dni_po = min(3, max(0, int(_num(row_g.get("dni_wymagalnosci_po"), 0))))
+            d_do = d_glos + timedelta(days=dni_po)
 
             # Uwzględniamy głosowania:
             # 1. Członek wstąpił przed lub w dniu zebrania (d_glos >= data_wst)
@@ -287,6 +284,7 @@ def oblicz_rating_celestia_dla_czlonka(
                     "data": d_glos,
                     "data_zbiorki_od": d_od,
                     "data_wymagalnosci_do": d_do,
+                    "dni_wymagalnosci_po": dni_po,
                     "nazwa": row_g.get("nazwa", "Głosowanie Koła"),
                     "waga": float(_num(row_g.get("waga"), 1.0))
                 })
@@ -301,41 +299,44 @@ def oblicz_rating_celestia_dla_czlonka(
             d_glos = g["data"]
             waga_g = g["waga"]
             okno_start = g["data_zbiorki_od"]
-            termin_wymagalnosci = g["data_wymagalnosci_do"]
+            dni_poslizgu = min(3, max(0, int(g.get("dni_wymagalnosci_po", 0))))
 
-            # Wyznaczenie salda członka na moment terminu wymagalności
-            sum_wpl_do_wym = sum(kw for d, kw in wplaty_map.items() if d <= termin_wymagalnosci)
-            sum_rec_do_wym = sum(kw for d, kw in reczne_map.items() if d <= termin_wymagalnosci)
-            sum_kor_do_wym = sum(kw for d, kw in korekty_map.items() if d <= termin_wymagalnosci)
-            nal_auto_do_wym, _ = oblicz_naliczenia_gr(data_wst, data_ur, reczny_param, termin_wymagalnosci)
+            # 1. Termin wymagalności składek na zebranie to DZIEŃ ZEBRANIA / GŁOSOWANIA (d_glos)
+            sum_wpl_do_glos = sum(kw for d, kw in wplaty_map.items() if d <= d_glos)
+            sum_rec_do_glos = sum(kw for d, kw in reczne_map.items() if d <= d_glos)
+            sum_kor_do_glos = sum(kw for d, kw in korekty_map.items() if d <= d_glos)
+            nal_auto_do_glos, _ = oblicz_naliczenia_gr(data_wst, data_ur, reczny_param, d_glos)
 
-            saldo_na_wym_gr = saldo_start_gr + sum_wpl_do_wym + sum_kor_do_wym - (nal_auto_do_wym + sum_rec_do_wym)
+            saldo_na_glos_gr = saldo_start_gr + sum_wpl_do_glos + sum_kor_do_glos - (nal_auto_do_glos + sum_rec_do_glos)
 
-            # Wpłaty w skonfigurowanym oknie zbiórki: [okno_start, termin_wymagalnosci]
-            wplaty_w_oknie_gr = sum(kw for d, kw in wplaty_map.items() if okno_start <= d <= termin_wymagalnosci)
+            # 2. Wpłaty w skonfigurowanym oknie zbiórki przed zebraniem: [okno_start, d_glos]
+            wplaty_w_oknie_gr = sum(kw for d, kw in wplaty_map.items() if okno_start <= d <= d_glos)
 
-            # Wpłaty w okienku poślizgu: (termin_wymagalnosci, termin_wymagalnosci + 3 dni]
-            okno_poslizgu = termin_wymagalnosci + timedelta(days=3)
-            wplaty_poslizg_gr = sum(kw for d, kw in wplaty_map.items() if termin_wymagalnosci < d <= okno_poslizgu)
+            # 3. Wpłaty w okienku poślizgu: wyłącznie po dniu zebrania, MAKSYMALNIE DO 3 DNI po głosowaniu!
+            if dni_poslizgu > 0:
+                okno_poslizgu = d_glos + timedelta(days=dni_poslizgu)
+                wplaty_poslizg_gr = sum(kw for d, kw in wplaty_map.items() if d_glos < d <= okno_poslizgu)
+            else:
+                wplaty_poslizg_gr = 0
 
-            # Stawka statutowa w miesiącu wymagalności
-            _, stawka_g_gr = pobierz_stawke_za_miesiac(data_wst, data_ur, reczny_param, termin_wymagalnosci)
+            # Stawka statutowa w miesiącu zebrania
+            _, stawka_g_gr = pobierz_stawke_za_miesiac(data_wst, data_ur, reczny_param, d_glos)
             stawka_g_gr = max(stawka_g_gr, 600)
 
-            dni_okna = max(1, (termin_wymagalnosci - okno_start).days)
+            dni_okna = max(1, (d_glos - okno_start).days + 1)
 
             # Ocena zdarzenia głosowania (0 - 100 pkt)
-            saldo_po_poslizgu_gr = saldo_na_wym_gr + wplaty_poslizg_gr
+            saldo_po_poslizgu_gr = saldo_na_glos_gr + wplaty_poslizg_gr
             pokryto_po_poslizgu = (wplaty_poslizg_gr > 0 and saldo_po_poslizgu_gr >= 0)
 
-            if saldo_na_wym_gr >= 0:
+            if saldo_na_glos_gr >= 0:
                 pkt_zdarzenia = 100
                 if wplaty_w_oknie_gr > 0:
                     status_zdarzenia = f"🟢 Spłacono w oknie zbiórki ({dni_okna} dni) — Czyste konto"
                 else:
                     status_zdarzenia = "🟢 Stała nadpłata / Czyste konto"
             else:
-                miesiace_dlugu = abs(saldo_na_wym_gr) / stawka_g_gr
+                miesiace_dlugu = abs(saldo_na_glos_gr) / stawka_g_gr
 
                 # 1. Skrajny default (> 28 msc długu, ~400+ zł)
                 if miesiace_dlugu > 28.0:
@@ -344,7 +345,7 @@ def oblicz_rating_celestia_dla_czlonka(
                         status_zdarzenia = f"🟡 Spłata ratunkowa skrajnego długu po terminie ({miesiace_dlugu:.1f} msc) — brak prawa głosu w dniu zebrania"
                     else:
                         pkt_zdarzenia = 0
-                        if dzis <= termin_wymagalnosci:
+                        if dzis <= d_glos:
                             status_zdarzenia = f"🔴 Brak prawa głosu na zebraniu — skrajny default (> 28 msc: {miesiace_dlugu:.1f} msc)"
                         else:
                             status_zdarzenia = f"🔴 Utrata prawa głosu — skrajny default (> 28 msc: {miesiace_dlugu:.1f} msc)"
@@ -356,7 +357,7 @@ def oblicz_rating_celestia_dla_czlonka(
                         status_zdarzenia = f"🟡 Spłata ratunkowa wieloletniego długu po terminie ({miesiace_dlugu:.1f} msc) — brak prawa głosu w dniu zebrania"
                     else:
                         pkt_zdarzenia = 3
-                        if dzis <= termin_wymagalnosci:
+                        if dzis <= d_glos:
                             status_zdarzenia = f"🔴 Brak prawa głosu na zebraniu — wieloletnie zadłużenie ({miesiace_dlugu:.1f} msc)"
                         else:
                             status_zdarzenia = f"🔴 Utrata prawa głosu — wieloletnie zadłużenie ({miesiace_dlugu:.1f} msc)"
@@ -368,7 +369,7 @@ def oblicz_rating_celestia_dla_czlonka(
                         status_zdarzenia = f"🟡 Spłata ratunkowa długu ponadrocznego po terminie ({miesiace_dlugu:.1f} msc) — brak prawa głosu w dniu zebrania"
                     else:
                         pkt_zdarzenia = 8
-                        if dzis <= termin_wymagalnosci:
+                        if dzis <= d_glos:
                             status_zdarzenia = f"🔴 Brak prawa głosu na zebraniu — zadłużenie ponadroczne ({miesiace_dlugu:.1f} msc)"
                         else:
                             status_zdarzenia = f"🔴 Utrata prawa głosu — zadłużenie ponadroczne ({miesiace_dlugu:.1f} msc)"
@@ -380,7 +381,7 @@ def oblicz_rating_celestia_dla_czlonka(
                         status_zdarzenia = f"🟡 Spłata ratunkowa utrwalonego długu po terminie ({miesiace_dlugu:.1f} msc) — brak prawa głosu w dniu zebrania"
                     else:
                         pkt_zdarzenia = 15
-                        if dzis <= termin_wymagalnosci:
+                        if dzis <= d_glos:
                             status_zdarzenia = f"🔴 Brak prawa głosu na zebraniu — utrwalone zadłużenie ({miesiace_dlugu:.1f} msc)"
                         else:
                             status_zdarzenia = f"🔴 Utrata prawa głosu — utrwalone zadłużenie ({miesiace_dlugu:.1f} msc)"
@@ -392,7 +393,7 @@ def oblicz_rating_celestia_dla_czlonka(
                         status_zdarzenia = f"🟡 Spłata ratunkowa po terminie ({miesiace_dlugu:.1f} msc) — brak prawa głosu w dniu zebrania"
                     else:
                         pkt_zdarzenia = 25
-                        if dzis <= termin_wymagalnosci:
+                        if dzis <= d_glos:
                             status_zdarzenia = f"🔴 Brak prawa głosu na zebraniu — świeże przekroczenie karencji ({miesiace_dlugu:.1f} msc)"
                         else:
                             status_zdarzenia = f"🔴 Utrata prawa głosu — świeże przekroczenie karencji ({miesiace_dlugu:.1f} msc)"
@@ -401,7 +402,7 @@ def oblicz_rating_celestia_dla_czlonka(
                 elif miesiace_dlugu > 2.0:
                     if pokryto_po_poslizgu:
                         pkt_zdarzenia = 65
-                        status_zdarzenia = "🟡 Pełna spłata zaległości z lekkim poślizgiem (do 3 dni po terminie) — zachowane prawo głosu"
+                        status_zdarzenia = f"🟡 Pełna spłata zaległości z lekkim poślizgiem ({dni_poslizgu} dni) — zachowane prawo głosu"
                     else:
                         pkt_zdarzenia = 40
                         status_zdarzenia = f"🟠 Na krawędzi karencji ({miesiace_dlugu:.1f} msc) — zachowane prawo głosu"
@@ -410,7 +411,7 @@ def oblicz_rating_celestia_dla_czlonka(
                 else:
                     if pokryto_po_poslizgu:
                         pkt_zdarzenia = 90
-                        status_zdarzenia = "🟢 Drobne zadłużenie spłacone w poślizgu (do 3 dni po terminie)"
+                        status_zdarzenia = f"🟢 Drobne zadłużenie spłacone w poślizgu ({dni_poslizgu} dni)"
                     else:
                         pkt_zdarzenia = 80
                         status_zdarzenia = f"🟢 Drobne zadłużenie ({miesiace_dlugu:.1f} msc) — zachowane prawo głosu"
@@ -427,10 +428,10 @@ def oblicz_rating_celestia_dla_czlonka(
                 "data_glosowania": d_glos.strftime("%Y-%m-%d"),
                 "nazwa": g["nazwa"],
                 "data_od": okno_start.strftime("%Y-%m-%d"),
-                "data_do": termin_wymagalnosci.strftime("%Y-%m-%d"),
-                "okres_zbiorki": f"{okno_start.strftime('%Y-%m-%d')} → {termin_wymagalnosci.strftime('%Y-%m-%d')} ({dni_okna} dni)",
-                "data_wymagalnosci": termin_wymagalnosci.strftime("%Y-%m-%d"),
-                "saldo_pln": saldo_na_wym_gr / 100.0,
+                "data_do": d_glos.strftime("%Y-%m-%d"),
+                "okres_zbiorki": f"{okno_start.strftime('%Y-%m-%d')} → {d_glos.strftime('%Y-%m-%d')} ({dni_okna} dni)",
+                "data_wymagalnosci": d_glos.strftime("%Y-%m-%d"),
+                "saldo_pln": saldo_na_glos_gr / 100.0,
                 "wplata_w_oknie_pln": wplaty_w_oknie_gr / 100.0,
                 "punkty": pkt_zdarzenia,
                 "status": status_zdarzenia

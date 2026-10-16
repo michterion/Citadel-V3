@@ -63,7 +63,7 @@ Ten plik stanowi trwałą pamięć projektu dla asystentów AI (Antigravity). Za
    * Każde koło definiuje własne parametry:
      * `data_zbiorki_od` oraz `data_wymagalnosci_do`
      * `dni_zbiorki_przed` (1–90 dni, np. 5–7 dni w małych kołach, 14–30 dni w dużych)
-     * `dni_wymagalnosci_po` (dopuszczalny poślizg 0–30 dni)
+     * `dni_wymagalnosci_po` (dopuszczalny poślizg 0–3 dni, maksymalnie 3 dni po zebraniu)
    * **Uwzględnianie zebrań w oknie zbiórki i nadchodzących**:
      * Zebrania są włączane do ratingu Celestia nie tylko wstecz, ale również gdy okno zbiórki jest już otwarte (`d_od <= dzis`) lub gdy termin zebrania przypada w horyzoncie 30 dni (`d_glos <= dzis + 30 dni`).
      * Pozwala to skarbnikowi i członkom na bieżąco monitorować prawa głosu i wywiązywanie się ze składek przed samym zebraniem (do terminu zebrania w danym miesiącu nie nalicza się nowa składka).
@@ -74,7 +74,7 @@ Ten plik stanowi trwałą pamięć projektu dla asystentów AI (Antigravity). Za
    * **Wskaźnik Pokrycia KDI**: **10%** — bilans wpłat do naliczeń.
    * **Rytm i Regularność Wpłat**: **5%** — ciągłość i rytmika transakcji.
 4. **Zabezpieczenie przed Symboliczną Wpłatą i Progresywna Skala Zapadalności**:
-   * Okienko poślizgu (do 3 dni po terminie) jest uznawane **wyłącznie wtedy, gdy wpłata faktycznie pokrywa całe zadłużenie** (`saldo_na_wym_gr + wplaty_poslizg_gr >= 0`).
+   * Okienko poślizgu (maksymalnie 3 dni po zebraniu) jest uznawane **wyłącznie wtedy, gdy wpłata faktycznie pokrywa całe zadłużenie** (`saldo_na_glos_gr + wplaty_poslizg_gr >= 0`). Termin wymagalności na 100 pkt przypada na dzień zebrania (`d_glos`), a poślizg jest ściśle ograniczony do 3 dni.
    * **Progresywna skala VDC zależna od czasu trwania długu**:
      * `dług <= 2 msc`: **80 pkt** (brak) / **90 pkt** (poślizg) — pełne prawo głosu.
      * `2–6 msc`: **40 pkt** (brak) / **65 pkt** (poślizg) — zachowane prawo głosu (karencja statutowa).

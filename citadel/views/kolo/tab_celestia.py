@@ -205,49 +205,52 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
             "punktem zapadalności dla algorytmu Celestia, badając czy składki zostały uregulowane w okienku przed zebraniem."
         )
 
-        # Formularz dodawania nowego terminu głosowania z konfigurowalnym oknem zbiórki
-        with st.form("form_dodaj_glosowanie", clear_on_submit=False):
-            st.markdown("##### ➕ Nowe Głosowanie / Zebranie")
-            col_g1, col_g2, col_g3 = st.columns([2, 3, 2])
-            with col_g1:
-                nowa_data = st.date_input("Data Głosowania / Zebrania:", value=dzis_pl())
-            with col_g2:
-                nowa_nazwa = st.text_input("Nazwa / Okazja:", placeholder="np. Walne Zebranie Członków, Wybory Władz Koła")
-            with col_g3:
-                nowa_waga_wybor = st.selectbox(
-                    "Ranga wydarzenia:",
-                    options=["Zwyczajne (waga 1.0)", "Kluczowe / Wybory Władz (waga 1.5)"]
-                )
-                waga_num = 1.5 if "1.5" in nowa_waga_wybor else 1.0
+        st.markdown("##### ➕ Nowe Głosowanie / Zebranie Koła")
+        st.caption("Skonfiguruj datę zebrania oraz okno zbiórki. Zmiana parametrów natychmiast przelicza podgląd na żywo.")
 
-            st.markdown("###### ⏱️ Okno zbiórki składek i termin wymagalności (dopasowane do wielkości koła)")
-            st.caption("W małym kole wystarczy krótsze okno (np. 5–7 dni), w dużym kole dłuższe (np. 14–30 dni). Nie stosujemy sztywnego 14-dniowego limitu.")
+        # Parametry zebrania i okna umieszczone POZA st.form dla natychmiastowego reaktywnego przeliczania podglądu (preview na żywo)
+        col_g1, col_g2 = st.columns([1, 1])
+        with col_g1:
+            nowa_data = st.date_input("Data Głosowania / Zebrania:", value=dzis_pl(), key="celestia_form_data")
+        with col_g2:
+            nowa_waga_wybor = st.selectbox(
+                "Ranga wydarzenia:",
+                options=["Zwyczajne (waga 1.0)", "Kluczowe / Wybory Władz (waga 1.5)"],
+                key="celestia_form_waga"
+            )
+            waga_num = 1.5 if "1.5" in nowa_waga_wybor else 1.0
 
-            c_okno1, c_okno2, c_okno3 = st.columns([2, 2, 3])
-            with c_okno1:
-                dni_przed_input = st.number_input(
-                    "Długość zbiórki (dni przed):",
-                    min_value=1,
-                    max_value=90,
-                    value=14,
-                    step=1,
-                    help="Liczba dni przed zebraniem, od kiedy otwarta jest oficjalna zbiórka składek."
-                )
-                data_od_domyslna = nowa_data - timedelta(days=int(dni_przed_input))
-            with c_okno2:
-                dni_po_input = st.number_input(
-                    "Dopuszczalny poślizg (dni po):",
-                    min_value=0,
-                    max_value=30,
-                    value=0,
-                    step=1,
-                    help="0 dni = składki muszą być uregulowane najpóźniej w dniu zebrania. > 0 = dodatkowe dni po zebraniu."
-                )
-                data_do_domyslna = nowa_data + timedelta(days=int(dni_po_input))
-            with c_okno3:
-                dni_lacznie = (data_do_domyslna - data_od_domyslna).days + 1
-                st.info(f"📅 **Okno zbiórki:** od **{data_od_domyslna}** do **{data_do_domyslna}** (łącznie **{dni_lacznie} dni** na wpłatę).")
+        c_okno1, c_okno2, c_okno3 = st.columns([1, 1, 2])
+        with c_okno1:
+            dni_przed_input = st.number_input(
+                "Długość zbiórki (dni przed):",
+                min_value=1,
+                max_value=90,
+                value=14,
+                step=1,
+                key="celestia_form_dni_przed",
+                help="Liczba dni przed zebraniem, od kiedy otwarta jest oficjalna zbiórka składek."
+            )
+        with c_okno2:
+            dni_po_input = st.number_input(
+                "Dopuszczalny poślizg (dni po zebraniu):",
+                min_value=0,
+                max_value=3,
+                value=0,
+                step=1,
+                key="celestia_form_dni_po",
+                help="Maksymalnie 3 dni po zebraniu na zaksięgowanie przelewów bankowych. Poślizg nigdy nie przekracza 3 dni."
+            )
+        with c_okno3:
+            data_od_domyslna = nowa_data - timedelta(days=int(dni_przed_input))
+            data_do_domyslna = nowa_data + timedelta(days=int(dni_po_input))
+            dni_lacznie = (nowa_data - data_od_domyslna).days + 1
+            poslizg_text = f" + poślizg do **{data_do_domyslna}** ({dni_po_input} dni)" if dni_po_input > 0 else " (brak poślizgu — termin do dnia zebrania)"
+            st.info(f"📅 **Okno zbiórki przed zebraniem:** od **{data_od_domyslna}** do **{nowa_data}** ({dni_lacznie} dni na terminową wpłatę){poslizg_text}.")
 
+        # Formularz z clear_on_submit=True dla nazwy i opisu
+        with st.form("form_dodaj_glosowanie", clear_on_submit=True):
+            nowa_nazwa = st.text_input("Nazwa / Okazja wydarzenia:", placeholder="np. Walne Zebranie Członków, Wybory Władz Koła")
             nowy_opis = st.text_input("Opcjonalny opis / uwagi:", placeholder="np. Wymóg braku zadłużenia na dzień otwarcia obrad")
 
             btn_dodaj = st.form_submit_button("➕ Zarejestruj Termin Głosowania", use_container_width=True)
@@ -267,7 +270,7 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
                         waga=waga_num,
                         user_id=curr_user_id
                     )
-                    st.success(f"Pomyślnie zarejestrowano termin: '{nowa_nazwa}' (Zbiórka od {data_od_domyslna} do {data_do_domyslna}).")
+                    st.success(f"Pomyślnie zarejestrowano termin: '{nowa_nazwa}' (Zbiórka od {data_od_domyslna} do {nowa_data}).")
                     st.rerun()
 
         st.markdown("---")
@@ -285,19 +288,19 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
             for _, r in terminy_df.iterrows():
                 d_glos = r["data_glosowania"]
                 dni_przed = int(_num(r.get("dni_zbiorki_przed"), 14))
-                dni_po = int(_num(r.get("dni_wymagalnosci_po"), 0))
+                dni_po = min(3, max(0, int(_num(r.get("dni_wymagalnosci_po"), 0))))
                 waga_val = float(_num(r.get("waga"), 1.0))
 
                 d_od = r["data_zbiorki_od"] if pd.notna(r.get("data_zbiorki_od")) else (d_glos - timedelta(days=dni_przed))
-                d_do = r["data_wymagalnosci_do"] if pd.notna(r.get("data_wymagalnosci_do")) else (d_glos + timedelta(days=dni_po))
-                dni_trwania = (d_do - d_od).days + 1
+                d_do = d_glos + timedelta(days=dni_po)
+                dni_trwania = (d_glos - d_od).days + 1
 
                 tablica_terminow.append({
                     "ID": r["id"],
                     "Data Głosowania": str(d_glos),
                     "Nazwa Wydarzenia": r["nazwa"],
-                    "Okno Zbiórki": f"{d_od} → {d_do} ({dni_trwania} dni)",
-                    "Termin Wymagalności": str(d_do),
+                    "Okno Zbiórki": f"{d_od} → {d_glos} ({dni_trwania} dni)",
+                    "Dopuszczalny Poślizg": f"{dni_po} dni (do {d_do})" if dni_po > 0 else "Brak poślizgu (0 dni)",
                     "Ranga / Waga": f"{waga_val:.1f}x",
                     "Opis": r["opis"] or "—",
                     "Zarejestrował": r["dodal_imie"] or "System",
@@ -306,7 +309,7 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
 
             df_t = pd.DataFrame(tablica_terminow)
             st.dataframe(
-                df_t[["Data Głosowania", "Nazwa Wydarzenia", "Okno Zbiórki", "Termin Wymagalności", "Ranga / Waga", "Opis", "Zarejestrował", "Data Wpisu"]],
+                df_t[["Data Głosowania", "Nazwa Wydarzenia", "Okno Zbiórki", "Dopuszczalny Poślizg", "Ranga / Waga", "Opis", "Zarejestrował", "Data Wpisu"]],
                 width="stretch",
                 hide_index=True
             )
