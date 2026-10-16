@@ -94,16 +94,34 @@ POZIOMY_CELESTIA = [
         "max_score": 259,
         "kolor_dark": "#e11d48",      # Karmin
         "kolor_light": "#9f1239",
-        "opis": "Trwałe zadłużenie. Brak jakichkolwiek wpłat przed zebraniami od ponad roku. Członek bierny finansowo."
+        "opis": "Zadłużenie roczne (ok. 8–12 msc długu, ~60–100 zł). Świeża lub utrwalona utrata praw głosu na zebraniach."
+    },
+    {
+        "kod": "D",
+        "nazwa": "Insolvency Grade 1",
+        "min_score": 90,
+        "max_score": 149,
+        "kolor_dark": "#dc2626",      # Czerwień / Bordo
+        "kolor_light": "#991b1b",
+        "opis": "Głęboka niewypłacalność (ok. 12–18 msc długu, ~100–160 zł). Brak wpłat na zebrania od ponad roku."
+    },
+    {
+        "kod": "DD",
+        "nazwa": "Insolvency Grade 2",
+        "min_score": 40,
+        "max_score": 89,
+        "kolor_dark": "#991b1b",      # Ciemny karmin / Kasztan
+        "kolor_light": "#7f1d1d",
+        "opis": "Wieloletnia niewypłacalność (ok. 18–26 msc długu, ~160–250 zł). Utrwalony, dwuletni brak wpłat i kontaktu."
     },
     {
         "kod": "DDD",
-        "nazwa": "Default",
+        "nazwa": "Terminal Default",
         "min_score": 0,
-        "max_score": 149,
-        "kolor_dark": "#991b1b",      # Głęboki ciemny karmin
-        "kolor_light": "#4c0519",
-        "opis": "Całkowity default. Brak wpłat w całej historii członkostwa lub wielokrotne, wieloletnie przekroczenie okresów karencji."
+        "max_score": 39,
+        "kolor_dark": "#7f1d1d",      # Mroczny brąz / bordowy
+        "kolor_light": "#450a0a",
+        "opis": "Całkowity default (> 28–36 msc długu, > 350–450 zł). Członek całkowicie nieaktywny, zero wpłat w historii."
     }
 ]
 
@@ -258,19 +276,43 @@ def oblicz_rating_celestia_dla_czlonka(
             else:
                 miesiace_dlugu = abs(saldo_na_wym_gr) / stawka_g_gr
 
-                # 1. Głęboka niewypłacalność / Default (> 12 msc długu)
-                if miesiace_dlugu > 12.0:
+                # 1. Skrajny default (> 28 msc długu, ~400+ zł)
+                if miesiace_dlugu > 28.0:
                     if pokryto_po_poslizgu:
-                        pkt_zdarzenia = 15
-                        status_zdarzenia = f"🟡 Spłata ratunkowa wieloletniego długu po terminie ({miesiace_dlugu:.1f} msc) — brak prawa głosu w dniu zebrania"
+                        pkt_zdarzenia = 5
+                        status_zdarzenia = f"🟡 Spłata ratunkowa skrajnego długu po terminie ({miesiace_dlugu:.1f} msc) — brak prawa głosu w dniu zebrania"
                     else:
                         pkt_zdarzenia = 0
                         if dzis <= termin_wymagalnosci:
-                            status_zdarzenia = f"🔴 Brak prawa głosu na zebraniu — głęboka niewypłacalność (> 12 msc: {miesiace_dlugu:.1f} msc)"
+                            status_zdarzenia = f"🔴 Brak prawa głosu na zebraniu — skrajny default (> 28 msc: {miesiace_dlugu:.1f} msc)"
                         else:
-                            status_zdarzenia = f"🔴 Utrata prawa głosu — głęboka niewypłacalność (> 12 msc: {miesiace_dlugu:.1f} msc)"
+                            status_zdarzenia = f"🔴 Utrata prawa głosu — skrajny default (> 28 msc: {miesiace_dlugu:.1f} msc)"
 
-                # 2. Utrwalone zadłużenie (8 - 12 msc długu — do 1 roku)
+                # 2. Głęboka niewypłacalność (18 - 28 msc długu, ~250-350 zł)
+                elif miesiace_dlugu > 18.0:
+                    if pokryto_po_poslizgu:
+                        pkt_zdarzenia = 10
+                        status_zdarzenia = f"🟡 Spłata ratunkowa wieloletniego długu po terminie ({miesiace_dlugu:.1f} msc) — brak prawa głosu w dniu zebrania"
+                    else:
+                        pkt_zdarzenia = 3
+                        if dzis <= termin_wymagalnosci:
+                            status_zdarzenia = f"🔴 Brak prawa głosu na zebraniu — wieloletnie zadłużenie ({miesiace_dlugu:.1f} msc)"
+                        else:
+                            status_zdarzenia = f"🔴 Utrata prawa głosu — wieloletnie zadłużenie ({miesiace_dlugu:.1f} msc)"
+
+                # 3. Dług ponadroczny (12 - 18 msc długu, ~180-250 zł)
+                elif miesiace_dlugu > 12.0:
+                    if pokryto_po_poslizgu:
+                        pkt_zdarzenia = 20
+                        status_zdarzenia = f"🟡 Spłata ratunkowa długu ponadrocznego po terminie ({miesiace_dlugu:.1f} msc) — brak prawa głosu w dniu zebrania"
+                    else:
+                        pkt_zdarzenia = 8
+                        if dzis <= termin_wymagalnosci:
+                            status_zdarzenia = f"🔴 Brak prawa głosu na zebraniu — zadłużenie ponadroczne ({miesiace_dlugu:.1f} msc)"
+                        else:
+                            status_zdarzenia = f"🔴 Utrata prawa głosu — zadłużenie ponadroczne ({miesiace_dlugu:.1f} msc)"
+
+                # 4. Utrwalone zadłużenie (8 - 12 msc długu — do 1 roku)
                 elif miesiace_dlugu > 8.0:
                     if pokryto_po_poslizgu:
                         pkt_zdarzenia = 30
@@ -282,7 +324,7 @@ def oblicz_rating_celestia_dla_czlonka(
                         else:
                             status_zdarzenia = f"🔴 Utrata prawa głosu — utrwalone zadłużenie ({miesiace_dlugu:.1f} msc)"
 
-                # 3. Świeże przekroczenie karencji (6 - 8 msc długu — utrata prawa głosu od niedawna)
+                # 5. Świeże przekroczenie karencji (6 - 8 msc długu — utrata prawa głosu od niedawna)
                 elif miesiace_dlugu > 6.0:
                     if pokryto_po_poslizgu:
                         pkt_zdarzenia = 45
@@ -294,7 +336,7 @@ def oblicz_rating_celestia_dla_czlonka(
                         else:
                             status_zdarzenia = f"🔴 Utrata prawa głosu — świeże przekroczenie karencji ({miesiace_dlugu:.1f} msc)"
 
-                # 4. Na krawędzi karencji (2 - 6 msc długu — zachowane prawo głosu na zebraniu)
+                # 6. Na krawędzi karencji (2 - 6 msc długu — zachowane prawo głosu na zebraniu)
                 elif miesiace_dlugu > 2.0:
                     if pokryto_po_poslizgu:
                         pkt_zdarzenia = 65
@@ -303,7 +345,7 @@ def oblicz_rating_celestia_dla_czlonka(
                         pkt_zdarzenia = 40
                         status_zdarzenia = f"🟠 Na krawędzi karencji ({miesiace_dlugu:.1f} msc) — zachowane prawo głosu"
 
-                # 5. Drobne zadłużenie (<= 2 msc długu — pełne prawo głosu)
+                # 7. Drobne zadłużenie (<= 2 msc długu — pełne prawo głosu)
                 else:
                     if pokryto_po_poslizgu:
                         pkt_zdarzenia = 90
@@ -341,7 +383,7 @@ def oblicz_rating_celestia_dla_czlonka(
     # ---------------------------------------------------------------------
     if kdi_val is None:
         naliczone_gr = int(dane_czlonka.get("naliczone_gr", 0))
-        kdi_score = 1000 if naliczone_gr == 0 else 50
+        kdi_score = 1000 if (naliczone_gr == 0 and saldo_akt_gr >= 0) else 50
     else:
         if kdi_val <= 0.50:
             kdi_score = 1000
@@ -368,7 +410,8 @@ def oblicz_rating_celestia_dla_czlonka(
         elif m_dlug <= 6.0:
             saldo_score = 300
         else:
-            saldo_score = max(0, int(round(150 - (m_dlug - 6.0) * 25)))
+            # Liniowe wygaszanie od 6 do 36 miesięcy (twarde zero dopiero po 36 msc długu)
+            saldo_score = max(0, int(round(250 - (m_dlug - 6.0) * (250 / 30.0))))
 
     # ---------------------------------------------------------------------
     # FILAR 4: Rytm i Regularność Wpłat - Waga: 5%
@@ -377,7 +420,7 @@ def oblicz_rating_celestia_dla_czlonka(
     staz_dni = max(1, (dzis - data_wst).days)
 
     if liczba_wplat == 0:
-        rytm_score = 50 if dane_czlonka.get("naliczone_gr", 0) > 0 else 800
+        rytm_score = 800 if (dane_czlonka.get("naliczone_gr", 0) == 0 and saldo_akt_gr >= 0) else 50
     else:
         srednio_dni_na_wplate = staz_dni / liczba_wplat
         if srednio_dni_na_wplate <= 45:

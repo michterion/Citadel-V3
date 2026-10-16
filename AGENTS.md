@@ -46,18 +46,18 @@ Ten plik stanowi trwałą pamięć projektu dla asystentów AI (Antigravity). Za
 
 ## 🛡️ 4. Silnik Ratingowy Celestia — Szczegóły Implementacji
 1. **Skala Ratingowa (12 stopni)**:
-   * **AAA** (90–100 pkt) — Wzorowa wiarygodność (Prime)
-   * **AA** (80–89 pkt) — Bardzo wysoka dyscyplina
-   * **A** (70–79 pkt) — Wysoka dyscyplina
-   * **BBB** (60–69 pkt) — Dobra wiarygodność inwestycyjna
-   * **BB** (50–59 pkt) — Zadowalająca dyscyplina
-   * **B** (40–49 pkt) — Dopuszczalna dyscyplina (drobne opóźnienia)
-   * **CCC** (30–39 pkt) — Podwyższone ryzyko
-   * **CC** (20–29 pkt) — Wysokie ryzyko zadłużenia
-   * **C** (10–19 pkt) — Krytyczne zadłużenie
-   * **DDD** (5–9 pkt) — Niewypłacalność głęboka
-   * **DD** (1–4 pkt) — Trwały brak kontaktu / zadłużenie
-   * **D** (0 pkt) — Skrajna niewypłacalność
+   * **AAA** (950–1000 pkt) — Wzorowa wiarygodność (Prime Apex)
+   * **AA** (880–949 pkt) — Bardzo wysoka dyscyplina (High Grade)
+   * **A** (800–879 pkt) — Wysoka dyscyplina (Upper Medium)
+   * **BBB** (700–799 pkt) — Dobra wiarygodność inwestycyjna (Good Standing)
+   * **BB** (600–699 pkt) — Zadowalająca dyscyplina (Moderate)
+   * **B** (500–599 pkt) — Dopuszczalna dyscyplina (Vulnerable)
+   * **CCC** (380–499 pkt) — Podwyższone ryzyko (Substantial Risk)
+   * **CC** (260–379 pkt) — Wysokie ryzyko zadłużenia (Extremely Speculative)
+   * **C** (150–259 pkt) — Krytyczne zadłużenie roczne (Near Default, ~60–100 zł)
+   * **D** (90–149 pkt) — Wczesna niewypłacalność ponadroczna (Insolvency 1, ~100–160 zł)
+   * **DD** (40–89 pkt) — Głęboka niewypłacalność dwuletnia (Insolvency 2, ~160–250 zł)
+   * **DDD** (0–39 pkt) — Skrajny / terminalny default (> 28–36 msc, > 350–450 zł)
 2. **Głosowania i Terminy Wymagalności (`terminy_glosowan`)**:
    * W praktyce składki są wymagane na głosowania/zebrania koła.
    * Każde koło definiuje własne parametry:
@@ -70,7 +70,7 @@ Ten plik stanowi trwałą pamięć projektu dla asystentów AI (Antigravity). Za
    * **Waga czasowa (*time-decay*)**: `waga_czasu = exp(-0.0018 * dni_od_glosowania)` faworyzuje najświeższe zachowania płatnicze (dla bieżących i nadchodzących zebrań `dni_od_glos = 0`, waga = 1.0).
 3. **Wagi Filarów Scoringowych**:
    * **Głosowania i Zapadalność (VDC)**: **65%** — kluczowy wyznacznik wiarygodności.
-   * **Bieżące Saldo i Karencja**: **20%** — stały bezpiecznik stanu konta.
+   * **Bieżące Saldo i Karencja**: **20%** — stały bezpiecznik stanu konta (twarde zero dopiero po 36 msc długu).
    * **Wskaźnik Pokrycia KDI**: **10%** — bilans wpłat do naliczeń.
    * **Rytm i Regularność Wpłat**: **5%** — ciągłość i rytmika transakcji.
 4. **Zabezpieczenie przed Symboliczną Wpłatą i Progresywna Skala Zapadalności**:
@@ -78,10 +78,13 @@ Ten plik stanowi trwałą pamięć projektu dla asystentów AI (Antigravity). Za
    * **Progresywna skala VDC zależna od czasu trwania długu**:
      * `dług <= 2 msc`: **80 pkt** (brak) / **90 pkt** (poślizg) — pełne prawo głosu.
      * `2–6 msc`: **40 pkt** (brak) / **65 pkt** (poślizg) — zachowane prawo głosu (karencja statutowa).
-     * `6–8 msc`: **25 pkt** (brak) / **45 pkt** (poślizg) — świeże przekroczenie karencji o 1–2 msc (brak prawa głosu na zebraniu, ale rating zachowuje klasę CC/CCC).
+     * `6–8 msc`: **25 pkt** (brak) / **45 pkt** (poślizg) — świeże przekroczenie karencji o 1–2 msc (klasa CC/CCC).
      * `8–12 msc`: **15 pkt** (brak) / **30 pkt** (poślizg) — utrwalone zadłużenie do 1 roku (klasa C).
-     * `> 12 msc`: **0 pkt** (brak) / **15 pkt** (poślizg) — głęboka niewypłacalność / wieloletni brak wpłat (spadek do DDD).
-   * Dzięki łagodnemu, schodkowemu wygaszaniu punktów członek, który spóźnił się o tydzień lub miesiąc po karencji, nie spada natychmiast z AA do najniższej klasy DDD obok dłużników z wieloletnim brakiem wpłat.
+     * `12–18 msc`: **8 pkt** (brak) / **20 pkt** (poślizg) — zadłużenie ponadroczne, ~100–160 zł (klasa D).
+     * `18–28 msc`: **3 pkt** (brak) / **10 pkt** (poślizg) — zadłużenie wieloletnie, ~160–250 zł (klasa DD).
+     * `> 28 msc`: **0 pkt** (brak) / **5 pkt** (poślizg) — skrajny default, > 350–450 zł (klasa DDD).
+   * **Filar Salda — twarde zero dopiero przy 36 msc**: Liniowe wygaszanie punktów salda od 6 do 36 miesięcy zapobiega zrównywaniu członka z 1.5 roku długu z osobą z 3+ latami bierności.
+   * Dzięki temu osoba z długiem ~150 zł ląduje w **D**, z ~200 zł w **DD**, a dopiero notoryczny dłużnik z 400+ zł długu w **DDD**.
 5. **Rating Koła = MEDIANA, a nie Średnia**:
    * Główny wskaźnik wiarygodności koła jest wyliczany jako **mediana statystyczna** (`statistics.median`) ze scoringów członków.
    * Średnia arytmetyczna jest podawana jedynie pomocniczo w nawiasie.

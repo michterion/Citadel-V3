@@ -12,8 +12,8 @@ Aplikacja integruje mechanizmy księgowości składek ze statutowym prawem głos
 * **Indywidualny scoring (0–100 pkt) i skala AAA–DDD**:
   * `AAA`, `AA`, `A` — Klasa Prime (Wzorowa wiarygodność, brak opóźnień).
   * `BBB`, `BB`, `B` — Klasa Inwestycyjna (Dobra dyscyplina, drobne poślizgi bez utraty prawa głosu).
-  * `CCC`, `CC`, `C` — Klasa Podwyższonego Ryzyka (Nieterminowość, narastające zaległości).
-  * `DDD`, `DD`, `D` — Klasa Niewypłacalna / Dłużnicy z utratą praw członkowskich.
+  * `CCC`, `CC`, `C` — Klasa Podwyższonego Ryzyka (Nieterminowość, narastające zaległości do 1 roku).
+  * `D`, `DD`, `DDD` — Klasa Niewypłacalna / Dłużnicy (D: ponadroczny dług ~100–160 zł, DD: wieloletni dług ~160–250 zł, DDD: terminalny default > 350–450 zł).
 * **Punkty Zapadalności (Terminy Głosowań i Zebrań)**:
   * W praktyce organizacyjnej składki stają się wymagalne w perspektywie zebrań i głosowań.
   * **Elastyczne okno zbiórki**: Każde koło konfiguruje własną długość zbiórki (`dni_zbiorki_przed`: np. 5–7 dni w małych kołach, 14–30 dni w dużych) oraz dopuszczalny poślizg (`dni_wymagalnosci_po`).
@@ -21,7 +21,7 @@ Aplikacja integruje mechanizmy księgowości składek ze statutowym prawem głos
   * **Ewaluacja zebrań w trakcie zbiórki i nadchodzących**: Celestia włącza do oceny zarówno zebrania historyczne, jak i zebrania z aktywnie otwartym oknem zbiórki (`d_od <= dzis`) oraz nadchodzące w ciągu 30 dni — dzięki temu przed zebraniem członkowie i skarbnik widzą swój realny status i uprawnienie do głosu.
 * **Wagi Filarów i Odporność na Nadużycia**:
   * Główną wagę stanowią **Wpłaty w Oknie przed Głosowaniami (65%)**, uzupełniane przez **Bieżące Saldo (20%)**, **KDI (10%)** oraz **Rytm Płatności (5%)**.
-  * **Progresywna skala oceny zapadalności po karencji**: Zamiast zerojedynkowego karania zerem wszystkich dłużników powyżej 6 miesięcy, algorytm stosuje stopniowe wygaszanie punktów: 6–8 msc (25 pkt, klasa CC/CCC), 8–12 msc (15 pkt, klasa C), a dopiero powyżej 1 roku długu — 0 pkt (klasa DDD). Spłata poślizgowa (3 dni) premiuje pełne uregulowanie długu adekwatnie do zachowanego uprawnienia do głosu (65 pkt dla długu 2–6 msc, 45 pkt dla 6–8 msc, 30 pkt dla 8–12 msc).
+  * **Progresywna skala zapadalności i 36-miesięczne wygaszanie salda**: Rozszerzona skala ratingowa (po C następują kolejno **D**, **DD** i **DDD**) w połączeniu z wygaszaniem punktów salda aż do 36 miesięcy zapobiega zrównywaniu członków z długiem ~100–200 zł (klasa D/DD) z notorycznymi dłużnikami mającymi 400+ zł zaległości i wieloletni brak wpłat (klasa DDD).
 * **Indeks Wiarygodności Koła (Mediana)**:
   * Rating całego koła jest obliczany jako **mediana statystyczna** scoringów członków (`statistics.median`), co zapobiega zniekształceniu obrazu koła przez pojedynczego skrajnego dłużnika.
 

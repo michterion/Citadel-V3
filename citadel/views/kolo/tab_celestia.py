@@ -35,7 +35,7 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
 
         liczba_prime = sum(1 for d in ranking_posortowany if d.get("celestia_rating") in ["AAA", "AA", "A"])
         liczba_medium = sum(1 for d in ranking_posortowany if d.get("celestia_rating") in ["BBB", "BB", "B"])
-        liczba_risk = sum(1 for d in ranking_posortowany if d.get("celestia_rating") in ["CCC", "CC", "C", "DDD"])
+        liczba_risk = sum(1 for d in ranking_posortowany if d.get("celestia_rating") in ["CCC", "CC", "C", "D", "DD", "DDD"])
 
         import statistics
         scores_kola = [d.get("celestia_score", 0) for d in ranking_posortowany]
@@ -132,7 +132,7 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
         elif wybrany_filtr == "Tylko Średnia (BBB — B)":
             przefiltrowani = [d for d in ranking_posortowany if d.get("celestia_rating") in ["BBB", "BB", "B"]]
         elif wybrany_filtr == "Tylko Zagrożeni (CCC — DDD)":
-            przefiltrowani = [d for d in ranking_posortowany if d.get("celestia_rating") in ["CCC", "CC", "C", "DDD"]]
+            przefiltrowani = [d for d in ranking_posortowany if d.get("celestia_rating") in ["CCC", "CC", "C", "D", "DD", "DDD"]]
         else:
             przefiltrowani = ranking_posortowany
 
