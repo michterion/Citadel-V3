@@ -73,3 +73,4 @@ def test_formatuj_wartosc_kdi():
 
     # 3. Brak danych i brak karencji
     assert formatuj_wartosc_kdi("Brak danych", None, "") == "Brak danych"
+

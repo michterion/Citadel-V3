@@ -4,6 +4,8 @@
 
 Aplikacja integruje mechanizmy księgowości składek ze statutowym prawem głosu oraz autorskim silnikiem ratingowym **Celestia**.
 
+> 📖 **Szczegółowa dokumentacja systemu**: Pełny opis architektury, schematu bazy danych, wzorów matematycznych oraz instrukcję krok po kroku znajdziesz w pliku [DOKUMENTACJA.md](DOKUMENTACJA.md).
+
 ---
 
 ## 🌟 Główne Moduły i Funkcjonalności
@@ -143,13 +145,6 @@ Citadel V3/
 ```bash
 # Formatowanie i analiza statyczna kodu (Ruff)
 uv run ruff check citadel
-
-# Automatyczna naprawa bezpiecznych reguł
-uv run ruff check citadel --fix
-
-# Uruchomienie testów
-uv run pytest
-```
 
 # Automatyczna naprawa bezpiecznych reguł
 uv run ruff check citadel --fix
