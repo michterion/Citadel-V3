@@ -83,15 +83,15 @@ def test_poslizg_max_3_dni():
         "nazwa": "Zebranie"
     }])
 
-    # 1. Wpłata 2 dni po zebraniu (2026-10-12) - mieści się w poślizgu (<= 3 dni) -> 90 pkt
+    # 1. Wpłata 2 dni po zebraniu (2026-10-12) - mieści się w poślizgu (<= 3 dni) -> 50.0 pkt (500 pkt, poniżej 600 pkt z dnia zebrania)
     wplaty_2dni = pd.DataFrame([{"data_wplaty": date(2026, 10, 12), "kwota_gr": 600}])
     res_2dni = oblicz_rating_celestia_dla_czlonka(1, dane_czl, terminy_df, wplaty_2dni, pd.DataFrame(), pd.DataFrame(), date(2026, 10, 15))
-    assert res_2dni["audyt_glosowan"][0]["punkty"] == 90
+    assert res_2dni["audyt_glosowan"][0]["punkty"] == 50.0
 
-    # 2. Wpłata 4 dni po zebraniu (2026-10-14) - poślizg wygasł (max 3 dni) -> 80 pkt (brak uznania poślizgu)
+    # 2. Wpłata 4 dni po zebraniu (2026-10-14) - poślizg wygasł (max 3 dni) -> 40.0 pkt (brak uznania poślizgu)
     wplaty_4dni = pd.DataFrame([{"data_wplaty": date(2026, 10, 14), "kwota_gr": 600}])
     res_4dni = oblicz_rating_celestia_dla_czlonka(1, dane_czl, terminy_df, wplaty_4dni, pd.DataFrame(), pd.DataFrame(), date(2026, 10, 15))
-    assert res_4dni["audyt_glosowan"][0]["punkty"] == 80
+    assert res_4dni["audyt_glosowan"][0]["punkty"] == 40.0
 
 
 def test_celestia_data_wstapienia_przyszlosc_zabezpieczenie():
@@ -206,6 +206,99 @@ def test_termin_kwartalny_nie_jest_glosowaniem_i_wplywa_na_rytm():
     assert res["audyt_kwartalny"][0]["punkty"] == 100
     assert res["filary"]["kwartalne_score"] == 1000
     assert res["filary"]["rytm_score"] >= 750
+
+
+def test_dynamiczna_terminowosc_okna_zbiorki():
+    from datetime import date
+
+    import pandas as pd
+    from celestia import oblicz_rating_celestia_dla_czlonka
+
+    dzis = date(2026, 10, 20)
+    dane_czl = {
+        "data_wst": date(2025, 1, 1),
+        "data_ur": date(1995, 1, 1),
+        "reczny_parametr": "M",
+        "saldo_start_gr": -600,
+        "saldo_akt_gr": 0,
+        "naliczone_gr": 0,
+        "kdi_val": 1.0,
+    }
+
+    # Zebranie 2026-10-14, okno zbiórki 14 dni (od 2026-09-30 do 2026-10-14)
+    terminy_df = pd.DataFrame([{
+        "id": 1,
+        "data_glosowania": date(2026, 10, 14),
+        "dni_zbiorki_przed": 14,
+        "dni_wymagalnosci_po": 0,
+        "waga": 1.0,
+        "nazwa": "Zebranie testowe"
+    }])
+
+    # 1. Wpłata w I połowie okna (np. dzień 5 z 14: 2026-10-05) -> 100.0 pkt (1000 pkt)
+    wpl_wczesna = pd.DataFrame([{"data_wplaty": date(2026, 10, 5), "kwota_gr": 600}])
+    res_wczesna = oblicz_rating_celestia_dla_czlonka(1, dane_czl, terminy_df, wpl_wczesna, pd.DataFrame(), pd.DataFrame(), dzis)
+    assert res_wczesna["audyt_glosowan"][0]["punkty"] == 100.0
+
+    # 2. Wpłata w dniu głosowania (ostatni dzień okna: 2026-10-14) -> dokładnie 60.0 pkt (600 pkt)
+    wpl_ostatni_dzien = pd.DataFrame([{"data_wplaty": date(2026, 10, 14), "kwota_gr": 600}])
+    res_ostatni_dzien = oblicz_rating_celestia_dla_czlonka(1, dane_czl, terminy_df, wpl_ostatni_dzien, pd.DataFrame(), pd.DataFrame(), dzis)
+    assert res_ostatni_dzien["audyt_glosowan"][0]["punkty"] == 60.0
+
+    # 3. Wpłata na 75% czasu okna (dzień 10.5 z 14, np. 2026-10-11, progress = 11/14 ~ 0.786) -> ~77.1 pkt
+    wpl_srodek = pd.DataFrame([{"data_wplaty": date(2026, 10, 11), "kwota_gr": 600}])
+    res_srodek = oblicz_rating_celestia_dla_czlonka(1, dane_czl, terminy_df, wpl_srodek, pd.DataFrame(), pd.DataFrame(), dzis)
+    assert 70.0 <= res_srodek["audyt_glosowan"][0]["punkty"] <= 85.0
+
+
+def test_zasada_zelazna_brak_aaa_bez_nadplaty():
+    from datetime import date
+
+    import pandas as pd
+    from celestia import oblicz_rating_celestia_dla_czlonka
+
+    dzis = date(2026, 10, 1)
+
+    # Członek A: Idealne wyniki, ale saldo = 0 (brak nadpłaty)
+    czlonek_bez_nadplaty = {
+        "data_wst": date(2025, 1, 1),
+        "data_ur": date(1995, 1, 1),
+        "reczny_parametr": "M",
+        "saldo_start_gr": 0,
+        "saldo_akt_gr": 0,  # SALDO RÓWNE ZERO
+        "naliczone_gr": 3600,
+        "kdi_val": 0.50,
+    }
+
+    # Członek B: Identyczne wyniki, ale posiada nadpłatę (+50.00 zł)
+    czlonek_z_nadplata = {
+        "data_wst": date(2025, 1, 1),
+        "data_ur": date(1995, 1, 1),
+        "reczny_parametr": "M",
+        "saldo_start_gr": 5000,
+        "saldo_akt_gr": 5000,  # Nスキル NADPŁATA +50 zł
+        "naliczone_gr": 3600,
+        "kdi_val": 0.50,
+    }
+
+    wplaty_df = pd.DataFrame([
+        {"data_wplaty": date(2026, 1, 5), "kwota_gr": 900},
+        {"data_wplaty": date(2026, 4, 5), "kwota_gr": 900},
+        {"data_wplaty": date(2026, 7, 5), "kwota_gr": 900},
+        {"data_wplaty": date(2026, 9, 20), "kwota_gr": 900},
+    ])
+
+    res_bez = oblicz_rating_celestia_dla_czlonka(1, czlonek_bez_nadplaty, pd.DataFrame(), wplaty_df, pd.DataFrame(), pd.DataFrame(), dzis)
+    res_z = oblicz_rating_celestia_dla_czlonka(2, czlonek_z_nadplata, pd.DataFrame(), wplaty_df, pd.DataFrame(), pd.DataFrame(), dzis)
+
+    # Członek bez nadpłaty ma twardy sufit na poziomie 949 pkt i NIE MOŻE mieć AAA
+    assert res_bez["score"] <= 949
+    assert res_bez["rating"] == "AA"
+
+    # Członek z nadpłatą otrzymuje poziom AAA (>= 950 pkt)
+    assert res_z["score"] >= 950
+    assert res_z["rating"] == "AAA"
+
 
 
 

@@ -333,28 +333,52 @@ def oblicz_rating_celestia_dla_czlonka(
             _, stawka_g_gr = pobierz_stawke_za_miesiac(efektywna_data_wst, data_ur, reczny_param, d_glos)
             stawka_g_gr = max(stawka_g_gr, 600)
 
-            dni_okna = max(1, (d_glos - okno_start).days + 1)
+            dni_okna = max(1, (d_glos - okno_start).days)
 
             # Ocena zdarzenia głosowania (0 - 100 pkt)
             saldo_po_poslizgu_gr = saldo_na_glos_gr + wplaty_poslizg_gr
             pokryto_po_poslizgu = (wplaty_poslizg_gr > 0 and saldo_po_poslizgu_gr >= 0)
 
             if saldo_na_glos_gr >= 0:
-                pkt_zdarzenia = 100
-                if wplaty_w_oknie_gr > 0:
-                    status_zdarzenia = f"🟢 Spłacono w oknie zbiórki ({dni_okna} dni) — Czyste konto"
+                # Weryfikacja czy członek miał stałą nadpłatę, czy musiał dokonać wpłaty w oknie
+                saldo_przed_oknem_gr = saldo_na_glos_gr - wplaty_w_oknie_gr
+                if saldo_przed_oknem_gr >= 0:
+                    pkt_zdarzenia = 100.0
+                    status_zdarzenia = "🟢 Stała nadpłata / Pokrycie przed zbiórką — wzorowa terminowość (1000 pkt)"
                 else:
-                    status_zdarzenia = "🟢 Stała nadpłata / Czyste konto"
+                    # Członek pokrył zadłużenie wpłatą w oknie zbiórki [okno_start, d_glos]
+                    wplaty_w_oknie = [(d, kw) for d, kw in wplaty_map.items() if okno_start <= d <= d_glos]
+                    wplaty_posortowane = sorted(wplaty_w_oknie, key=lambda x: x[0])
+                    data_efekt = wplaty_posortowane[-1][0] if wplaty_posortowane else d_glos
+
+                    dni_od_startu = max(0, (data_efekt - okno_start).days)
+                    progress = min(1.0, max(0.0, dni_od_startu / dni_okna))
+
+                    # Dynamiczna skala terminowości w oknie zbiórki:
+                    # Pierwsze 50% czasu nie obniża wyniku (1000 pkt / 100.0).
+                    # W drugiej połowie skala liniowo spada do 600 pkt (60.0) w dniu głosowania.
+                    if progress <= 0.50:
+                        pkt_zdarzenia = 100.0
+                        dni_przed = (d_glos - data_efekt).days
+                        status_zdarzenia = f"🟢 Wpłata w I połowie okna zbiórki ({dni_przed} dni przed zebraniem) — 1000 pkt"
+                    else:
+                        pkt_zdarzenia = round(100.0 - ((progress - 0.50) / 0.50) * 40.0, 1)
+                        dni_przed = (d_glos - data_efekt).days
+                        pkt_tys = int(round(pkt_zdarzenia * 10))
+                        if dni_przed == 0:
+                            status_zdarzenia = f"🟡 Wpłata w dniu głosowania (ostatni dzień zbiórki) — {pkt_tys} pkt"
+                        else:
+                            status_zdarzenia = f"🟢 Wpłata w II połowie okna zbiórki ({dni_przed} dni przed zebraniem) — {pkt_tys} pkt"
             else:
                 miesiace_dlugu = abs(saldo_na_glos_gr) / stawka_g_gr
 
                 # 1. Skrajny default (> 28 msc długu, ~400+ zł)
                 if miesiace_dlugu > 28.0:
                     if pokryto_po_poslizgu:
-                        pkt_zdarzenia = 5
+                        pkt_zdarzenia = 5.0
                         status_zdarzenia = f"🟡 Spłata ratunkowa skrajnego długu po terminie ({miesiace_dlugu:.1f} msc) — brak prawa głosu w dniu zebrania"
                     else:
-                        pkt_zdarzenia = 0
+                        pkt_zdarzenia = 0.0
                         if dzis <= d_glos:
                             status_zdarzenia = f"🔴 Brak prawa głosu na zebraniu — skrajny default (> 28 msc: {miesiace_dlugu:.1f} msc)"
                         else:
@@ -363,10 +387,10 @@ def oblicz_rating_celestia_dla_czlonka(
                 # 2. Głęboka niewypłacalność (18 - 28 msc długu, ~250-350 zł)
                 elif miesiace_dlugu > 18.0:
                     if pokryto_po_poslizgu:
-                        pkt_zdarzenia = 10
+                        pkt_zdarzenia = 10.0
                         status_zdarzenia = f"🟡 Spłata ratunkowa wieloletniego długu po terminie ({miesiace_dlugu:.1f} msc) — brak prawa głosu w dniu zebrania"
                     else:
-                        pkt_zdarzenia = 3
+                        pkt_zdarzenia = 3.0
                         if dzis <= d_glos:
                             status_zdarzenia = f"🔴 Brak prawa głosu na zebraniu — wieloletnie zadłużenie ({miesiace_dlugu:.1f} msc)"
                         else:
@@ -375,10 +399,10 @@ def oblicz_rating_celestia_dla_czlonka(
                 # 3. Dług ponadroczny (12 - 18 msc długu, ~180-250 zł)
                 elif miesiace_dlugu > 12.0:
                     if pokryto_po_poslizgu:
-                        pkt_zdarzenia = 20
+                        pkt_zdarzenia = 18.0
                         status_zdarzenia = f"🟡 Spłata ratunkowa długu ponadrocznego po terminie ({miesiace_dlugu:.1f} msc) — brak prawa głosu w dniu zebrania"
                     else:
-                        pkt_zdarzenia = 8
+                        pkt_zdarzenia = 6.0
                         if dzis <= d_glos:
                             status_zdarzenia = f"🔴 Brak prawa głosu na zebraniu — zadłużenie ponadroczne ({miesiace_dlugu:.1f} msc)"
                         else:
@@ -387,10 +411,10 @@ def oblicz_rating_celestia_dla_czlonka(
                 # 4. Utrwalone zadłużenie (8 - 12 msc długu — do 1 roku)
                 elif miesiace_dlugu > 8.0:
                     if pokryto_po_poslizgu:
-                        pkt_zdarzenia = 30
+                        pkt_zdarzenia = 25.0
                         status_zdarzenia = f"🟡 Spłata ratunkowa utrwalonego długu po terminie ({miesiace_dlugu:.1f} msc) — brak prawa głosu w dniu zebrania"
                     else:
-                        pkt_zdarzenia = 15
+                        pkt_zdarzenia = 12.0
                         if dzis <= d_glos:
                             status_zdarzenia = f"🔴 Brak prawa głosu na zebraniu — utrwalone zadłużenie ({miesiace_dlugu:.1f} msc)"
                         else:
@@ -399,10 +423,10 @@ def oblicz_rating_celestia_dla_czlonka(
                 # 5. Świeże przekroczenie karencji (6 - 8 msc długu — utrata prawa głosu od niedawna)
                 elif miesiace_dlugu > 6.0:
                     if pokryto_po_poslizgu:
-                        pkt_zdarzenia = 45
+                        pkt_zdarzenia = 30.0
                         status_zdarzenia = f"🟡 Spłata ratunkowa po terminie ({miesiace_dlugu:.1f} msc) — brak prawa głosu w dniu zebrania"
                     else:
-                        pkt_zdarzenia = 25
+                        pkt_zdarzenia = 18.0
                         if dzis <= d_glos:
                             status_zdarzenia = f"🔴 Brak prawa głosu na zebraniu — świeże przekroczenie karencji ({miesiace_dlugu:.1f} msc)"
                         else:
@@ -411,20 +435,20 @@ def oblicz_rating_celestia_dla_czlonka(
                 # 6. Na krawędzi karencji (2 - 6 msc długu — zachowane prawo głosu na zebraniu)
                 elif miesiace_dlugu > 2.0:
                     if pokryto_po_poslizgu:
-                        pkt_zdarzenia = 65
-                        status_zdarzenia = f"🟡 Pełna spłata zaległości z lekkim poślizgiem ({dni_poslizgu} dni) — zachowane prawo głosu"
+                        pkt_zdarzenia = 45.0
+                        status_zdarzenia = f"🟡 Pełna spłata zaległości w poślizgu (+{dni_poslizgu} dni) — zachowane prawo głosu (450 pkt)"
                     else:
-                        pkt_zdarzenia = 40
-                        status_zdarzenia = f"🟠 Na krawędzi karencji ({miesiace_dlugu:.1f} msc) — zachowane prawo głosu"
+                        pkt_zdarzenia = 28.0
+                        status_zdarzenia = f"🟠 Na krawędzi karencji ({miesiace_dlugu:.1f} msc) — zachowane prawo głosu (280 pkt)"
 
                 # 7. Drobne zadłużenie (<= 2 msc długu — pełne prawo głosu)
                 else:
                     if pokryto_po_poslizgu:
-                        pkt_zdarzenia = 90
-                        status_zdarzenia = f"🟢 Drobne zadłużenie spłacone w poślizgu ({dni_poslizgu} dni)"
+                        pkt_zdarzenia = 50.0
+                        status_zdarzenia = f"🟢 Drobne zadłużenie spłacone w poślizgu ({dni_poslizgu} dni) — 500 pkt"
                     else:
-                        pkt_zdarzenia = 80
-                        status_zdarzenia = f"🟢 Drobne zadłużenie ({miesiace_dlugu:.1f} msc) — zachowane prawo głosu"
+                        pkt_zdarzenia = 40.0
+                        status_zdarzenia = f"🟢 Drobne zadłużenie ({miesiace_dlugu:.1f} msc) — zachowane prawo głosu (400 pkt)"
 
             # Współczynnik zanikania w czasie (time-decay): ostatnie głosowania ważą najwięcej
             dni_od_glos = max(0, (dzis - d_glos).days)
@@ -471,19 +495,24 @@ def oblicz_rating_celestia_dla_czlonka(
     # ---------------------------------------------------------------------
     # FILAR 3: Bieżące Saldo i Karencja - Waga: 20%
     # ---------------------------------------------------------------------
-    if saldo_akt_gr >= 0:
-        saldo_score = 1000
+    # ---------------------------------------------------------------------
+    # FILAR 3: Bieżące Saldo i Karencja - Waga: 20%
+    # ---------------------------------------------------------------------
+    if saldo_akt_gr > 0:
+        saldo_score = 1000  # Faktyczna nadpłata (składki opłacone w przód)
+    elif saldo_akt_gr == 0:
+        saldo_score = 900   # Czyste konto (brak długu, ale brak nadpłaty)
     else:
         m_dlug = abs(saldo_akt_gr) / max(stawka_biezaca_gr, 1)
         if m_dlug <= 1.0:
-            saldo_score = 850
+            saldo_score = 800
         elif m_dlug <= 3.0:
-            saldo_score = 600
+            saldo_score = 550
         elif m_dlug <= 6.0:
-            saldo_score = 300
+            saldo_score = 250
         else:
             # Liniowe wygaszanie od 6 do 36 miesięcy (twarde zero dopiero po 36 msc długu)
-            saldo_score = max(0, int(round(250 - (m_dlug - 6.0) * (250 / 30.0))))
+            saldo_score = max(0, int(round(200 - (m_dlug - 6.0) * (200 / 30.0))))
 
     # ---------------------------------------------------------------------
     # FILAR 4: Rytm i Regularność Wpłat - Waga: 5% (Model Zbiórek Kwartalnych)
@@ -542,25 +571,48 @@ def oblicz_rating_celestia_dla_czlonka(
             _, stawka_q_gr = pobierz_stawke_za_miesiac(efektywna_data_wst, data_ur, reczny_param, d_q)
             stawka_q_gr = max(stawka_q_gr, 600)
 
+            dni_okna_q = max(1, (d_q - okno_start).days)
             if saldo_na_q_gr >= 0:
-                pkt_q = 100
-                status_q = "Opłacono w terminie (brak długu)"
+                saldo_przed_oknem_q = saldo_na_q_gr - wplaty_w_oknie_gr
+                if saldo_przed_oknem_q >= 0:
+                    pkt_q = 100.0
+                    status_q = "Stała nadpłata przed zbiórką (brak długu) — 1000 pkt"
+                else:
+                    wplaty_w_oknie_q = [(d, kw) for d, kw in wplaty_map.items() if okno_start <= d <= d_q]
+                    wplaty_posortowane_q = sorted(wplaty_w_oknie_q, key=lambda x: x[0])
+                    data_efekt_q = wplaty_posortowane_q[-1][0] if wplaty_posortowane_q else d_q
+
+                    dni_od_start_q = max(0, (data_efekt_q - okno_start).days)
+                    prog_q = min(1.0, max(0.0, dni_od_start_q / dni_okna_q))
+
+                    if prog_q <= 0.50:
+                        pkt_q = 100.0
+                        dni_przed_q = (d_q - data_efekt_q).days
+                        status_q = f"Wpłata w I połowie okna ({dni_przed_q} dni przed terminem) — 1000 pkt"
+                    else:
+                        pkt_q = round(100.0 - ((prog_q - 0.50) / 0.50) * 40.0, 1)
+                        dni_przed_q = (d_q - data_efekt_q).days
+                        pkt_q_tys = int(round(pkt_q * 10))
+                        if dni_przed_q == 0:
+                            status_q = f"Wpłata w dniu zbiórki (ostatni dzień) — {pkt_q_tys} pkt"
+                        else:
+                            status_q = f"Wpłata w II połowie okna ({dni_przed_q} dni przed terminem) — {pkt_q_tys} pkt"
             elif wplaty_poslizg_gr > 0 and saldo_po_poslizgu_gr >= 0:
-                pkt_q = 90
-                status_q = f"Opłacono w poślizgu (+{dni_poslizgu} dni)"
+                pkt_q = 50.0
+                status_q = f"Opłacono w poślizgu (+{dni_poslizgu} dni) — 500 pkt"
             elif wplaty_w_oknie_gr > 0:
-                pkt_q = 65
+                pkt_q = 35.0
                 status_q = "Częściowa wpłata w oknie zbiórki"
             else:
                 m_dlugu_q = abs(saldo_na_q_gr) / max(stawka_q_gr, 1)
                 if m_dlugu_q <= 1.0:
-                    pkt_q = 50
+                    pkt_q = 25.0
                     status_q = "Niewielkie opóźnienie (≤ 1 msc długu)"
                 elif m_dlugu_q <= 3.0:
-                    pkt_q = 30
+                    pkt_q = 15.0
                     status_q = "Zaległość kwartalna (1–3 msc długu)"
                 else:
-                    pkt_q = 10
+                    pkt_q = 5.0
                     status_q = "Brak wpłaty na zbiórkę kwartalną (> 3 msc długu)"
 
             dni_od_q = max(0, (dzis - d_q).days) if d_q <= dzis else 0
@@ -612,6 +664,15 @@ def oblicz_rating_celestia_dla_czlonka(
         ))
 
     calkowity_score = max(0, min(1000, calkowity_score))
+
+    # ---------------------------------------------------------------------
+    # ZASADA ŻELAZNA: Bez nadpłaty nie powinno się mieć nigdy AAA
+    # ---------------------------------------------------------------------
+    # Poziom AAA (950–1000 pkt) jest zarezerwowany WYŁĄCZNIE dla członków z faktyczną nadpłatą (saldo_akt_gr > 0).
+    # Osoby rozliczone na zero (saldo_akt_gr == 0) lub z zadłużeniem mają twardy sufit na poziomie 949 pkt (klasa AA).
+    if saldo_akt_gr <= 0 and calkowity_score >= 950:
+        calkowity_score = 949
+
     def_rating = pobierz_definicje_ratingu(calkowity_score)
 
     return {

@@ -81,23 +81,32 @@ Ten plik stanowi trwałą pamięć projektu dla asystentów AI (Antigravity). Za
    * **Waga czasowa (*time-decay*)**: `waga_czasu = exp(-0.0018 * dni_od_terminu)` faworyzuje najświeższe zachowania płatnicze.
 3. **Wagi Filarów Scoringowych i Nowy Rytm Kwartalny**:
    * **Głosowania i Zapadalność (VDC)**: **65%** — kluczowy wyznacznik wiarygodności (tylko zdarzenia `GLOSOWANIE`).
-   * **Bieżące Saldo i Karencja**: **20%** — stały bezpiecznik stanu konta (twarde zero dopiero po 36 msc długu).
+   * **Bieżące Saldo i Karencja**: **20%** — stały bezpiecznik stanu konta:
+     * `saldo_akt_gr > 0` (nadpłata): **1000 pkt**.
+     * `saldo_akt_gr == 0` (stan zerowy, brak zaległości): **900 pkt**.
+     * Liniowe wygaszanie punktów salda od 6 do 36 miesięcy zaległości (twarde zero dopiero po 36 msc długu).
    * **Wskaźnik Pokrycia KDI**: **10%** — bilans wpłat do naliczeń.
    * **Rytm i Regularność Wpłat**: **5%** — **zorientowany na model kwartalny**:
      * Wpłaty co kwartał (średnio do 105 dni na wpłatę) dają wzorcowe **1000 pkt** (zamiast sztucznie zaniżanych 850 pkt).
      * Jeśli koło zarejestrowało zbiórki kwartalne (`KWARTALNY`), filar łączy realizację wyznaczonych zbiórek kwartalnych (60%) z ogólną kadencją wpłat (40%).
      * Jeśli koło nie ogłaszało jeszcze zbiórek kwartalnych, ocena bazuje w 100% na ogólnej kadencji kwartalnej.
-4. **Zabezpieczenie przed Symboliczną Wpłatą i Progresywna Skala Zapadalności**:
-   * Okienko poślizgu (maksymalnie 3 dni po zebraniu) jest uznawane **wyłącznie wtedy, gdy wpłata faktycznie pokrywa całe zadłużenie** (`saldo_na_glos_gr + wplaty_poslizg_gr >= 0`). Termin wymagalności na 100 pkt przypada na dzień zebrania (`d_glos`), a poślizg jest ściśle ograniczony do 3 dni.
+4. **Dynamiczna Terminowość w Oknie Zbiórki i Żelazna Reguła AAA**:
+   * **Dynamiczna skala punktowa w oknie zbiórki**:
+     * Stała nadpłata przed zbiórką (`saldo_na_glos_gr - wplaty_w_oknie_gr >= 0`): **1000 pkt**.
+     * Wpłata w pierwszych 50% czasu trwania zbiórki ($progress \le 0.50$): **1000 pkt** (brak jakiejkolwiek kary).
+     * Wpłata w drugiej połowie okna zbiórki ($0.50 < progress \le 1.0$): płynny, liniowy spadek od **1000 pkt** do **600 pkt** w ostatnim dniu zbiórki / dniu głosowania (`pkt = 100.0 - ((progress - 0.50) / 0.50) * 40.0`).
+     * Poślizg (1–3 dni po terminie, tylko przy pełnym pokryciu długu): **500–550 pkt** (musi dawać mniej niż wpłata w dniu terminu, by wyeliminować opłacalność spóźnienia).
+   * **Żelazna Reguła AAA (Brak AAA bez nadpłaty)**:
+     * Poziom **AAA (950–1000 pkt)** jest bezwzględnie zarezerwowany **wyłącznie dla członków z faktyczną nadpłatą** (`saldo_akt_gr > 0`).
+     * Członek z saldem $\le 0$ (nawet przy idealnym rozliczeniu na zero i 1000 pkt w VDC) ma twardy sufit na poziomie **949 pkt (maksimum klasa AA)**.
    * **Progresywna skala VDC zależna od czasu trwania długu**:
-     * `dług <= 2 msc`: **80 pkt** (brak) / **90 pkt** (poślizg) — pełne prawo głosu.
-     * `2–6 msc`: **40 pkt** (brak) / **65 pkt** (poślizg) — zachowane prawo głosu (karencja statutowa).
-     * `6–8 msc`: **25 pkt** (brak) / **45 pkt** (poślizg) — świeże przekroczenie karencji o 1–2 msc (klasa CC/CCC).
-     * `8–12 msc`: **15 pkt** (brak) / **30 pkt** (poślizg) — utrwalone zadłużenie do 1 roku (klasa C).
-     * `12–18 msc`: **8 pkt** (brak) / **20 pkt** (poślizg) — zadłużenie ponadroczne, ~100–160 zł (klasa D).
-     * `18–28 msc`: **3 pkt** (brak) / **10 pkt** (poślizg) — zadłużenie wieloletnie, ~160–250 zł (klasa DD).
-     * `> 28 msc`: **0 pkt** (brak) / **5 pkt** (poślizg) — skrajny default, > 350–450 zł (klasa DDD).
-   * **Filar Salda — twarde zero dopiero przy 36 msc**: Liniowe wygaszanie punktów salda od 6 do 36 miesięcy zapobiega zrównywaniu członka z 1.5 roku długu z osobą z 3+ latami bierności.
+     * `dług <= 2 msc`: **400 pkt** (brak wpłaty) / **500–550 pkt** (poślizg) — zachowane pełne prawo głosu.
+     * `2–6 msc`: **400 pkt** (brak) / **650 pkt** (poślizg) — zachowane prawo głosu (karencja statutowa).
+     * `6–8 msc`: **250 pkt** (brak) / **450 pkt** (poślizg) — świeże przekroczenie karencji o 1–2 msc (klasa CC/CCC).
+     * `8–12 msc`: **150 pkt** (brak) / **300 pkt** (poślizg) — utrwalone zadłużenie do 1 roku (klasa C).
+     * `12–18 msc`: **80 pkt** (brak) / **200 pkt** (poślizg) — zadłużenie ponadroczne, ~100–160 zł (klasa D).
+     * `18–28 msc`: **30 pkt** (brak) / **100 pkt** (poślizg) — zadłużenie wieloletnie, ~160–250 zł (klasa DD).
+     * `> 28 msc`: **0 pkt** (brak) / **50 pkt** (poślizg) — skrajny default, > 350–450 zł (klasa DDD).
    * Dzięki temu osoba z długiem ~150 zł ląduje w **D**, z ~200 zł w **DD**, a dopiero notoryczny dłużnik z 400+ zł długu w **DDD**.
 5. **Rating Koła = MEDIANA, a nie Średnia**:
    * Główny wskaźnik wiarygodności koła jest wyliczany jako **mediana statystyczna** (`statistics.median`) ze scoringów członków.
