@@ -129,3 +129,83 @@ def test_celestia_data_wstapienia_przyszlosc_zabezpieczenie():
     assert res["rating"] in ["AAA", "AA", "A", "BBB", "BB", "B", "CCC", "CC", "C", "D", "DD", "DDD"]
 
 
+def test_rytm_platnosci_kwartalny_1000_pkt():
+    from datetime import date
+
+    import pandas as pd
+    from celestia import oblicz_rating_celestia_dla_czlonka
+
+    dzis = date(2026, 10, 1)
+    # Staż 360 dni, 4 wpłaty (co ~90 dni) - wzorcowy rytm kwartalny
+    dane_czl = {
+        "data_wst": date(2025, 10, 5),
+        "data_ur": date(1995, 1, 1),
+        "reczny_parametr": "M",
+        "saldo_start_gr": 0,
+        "saldo_akt_gr": 0,
+        "naliczone_gr": 3600,
+        "kdi_val": 1.0,
+    }
+    wplaty_df = pd.DataFrame([
+        {"data_wplaty": date(2026, 1, 5), "kwota_gr": 900},
+        {"data_wplaty": date(2026, 4, 5), "kwota_gr": 900},
+        {"data_wplaty": date(2026, 7, 5), "kwota_gr": 900},
+        {"data_wplaty": date(2026, 9, 20), "kwota_gr": 900},  # świeża wpłata w bieżącym kwartale
+    ])
+
+    res = oblicz_rating_celestia_dla_czlonka(1, dane_czl, pd.DataFrame(), wplaty_df, pd.DataFrame(), pd.DataFrame(), dzis)
+    # Płacenie kwartalne (średnio ~90 dni na wpłatę) powinno dawać pełne 1000 pkt
+    assert res["filary"]["kadencja_dni"] <= 105
+    assert res["filary"]["rytm_score"] == 1000
+
+
+def test_termin_kwartalny_nie_jest_glosowaniem_i_wplywa_na_rytm():
+    from datetime import date
+
+    import pandas as pd
+    from celestia import oblicz_rating_celestia_dla_czlonka
+
+    dzis = date(2026, 10, 1)
+    dane_czl = {
+        "data_wst": date(2025, 1, 1),
+        "data_ur": date(1990, 1, 1),
+        "reczny_parametr": "M",
+        "saldo_start_gr": 0,
+        "saldo_akt_gr": 0,
+        "naliczone_gr": 6000,
+        "kdi_val": 1.0,
+    }
+
+    # Zarejestrowana TYLKO zbiórka kwartalna (nie ma żadnych zebrań / głosowań)
+    terminy_df = pd.DataFrame([{
+        "id": 10,
+        "data_glosowania": date(2026, 6, 30),
+        "dni_zbiorki_przed": 14,
+        "dni_wymagalnosci_po": 3,
+        "waga": 1.0,
+        "nazwa": "Zbiórka Q2 2026",
+        "typ_terminu": "KWARTALNY"
+    }])
+
+    # Wpłata w oknie zbiórki kwartalnej (2026-06-25)
+    wplaty_df = pd.DataFrame([
+        {"data_wplaty": date(2026, 6, 25), "kwota_gr": 6000}
+    ])
+
+    res = oblicz_rating_celestia_dla_czlonka(1, dane_czl, terminy_df, wplaty_df, pd.DataFrame(), pd.DataFrame(), dzis)
+
+    # 1. Termin kwartalny NIE MOŻE zaliczać się jako dzień głosowania (VDC)
+    assert res["filary"]["liczba_glosowan"] == 0
+    assert res["filary"]["vdc_score"] is None
+    assert len(res["audyt_glosowan"]) == 0
+
+    # 2. Termin kwartalny został zaliczony do zbiórek kwartalnych i filaru Rytmu
+    assert res["filary"]["liczba_kwartalnych"] == 1
+    assert len(res["audyt_kwartalny"]) == 1
+    assert res["audyt_kwartalny"][0]["nazwa"] == "Zbiórka Q2 2026"
+    assert res["audyt_kwartalny"][0]["punkty"] == 100
+    assert res["filary"]["kwartalne_score"] == 1000
+    assert res["filary"]["rytm_score"] >= 750
+
+
+

@@ -64,21 +64,29 @@ Ten plik stanowi trwałą pamięć projektu dla asystentów AI (Antigravity). Za
    * **D** (90–149 pkt) — Wczesna niewypłacalność ponadroczna (Insolvency 1, ~100–160 zł)
    * **DD** (40–89 pkt) — Głęboka niewypłacalność dwuletnia (Insolvency 2, ~160–250 zł)
    * **DDD** (0–39 pkt) — Skrajny / terminalny default (> 28–36 msc, > 350–450 zł)
-2. **Głosowania i Terminy Wymagalności (`terminy_glosowan`)**:
-   * W praktyce składki są wymagane na głosowania/zebrania koła.
-   * Każde koło definiuje własne parametry:
+2. **Dni Wymagalności (`terminy_glosowan`) — Dwie Kategorie Zdarzeń**:
+   * Tabela `terminy_glosowan` obsługuje dwa odrębne typy zdarzeń (`typ_terminu`):
+     1. **`GLOSOWANIE`** (Domyślny) — Walne Zebranie, Wybory Władz, Głosowania uchwał:
+        * Kluczowy punkt zapadalności dla **Filaru 1 (VDC — 65%)** i wyznaczania praw głosu.
+        * Wymaga niezalegania ze składkami na dzień zebrania (z max 3-dniowym poślizgiem).
+     2. **`KWARTALNY`** — Oficjalny Dzień Wymagalności Kwartalnej / Zbiórka Kwartalna:
+        * **BEZWZGLĘDNIE NIE zalicza się jako dzień głosowania** (nie wchodzi do VDC, nie zlicza się w `liczba_glosowan`, nie blokuje praw głosu na zebraniach).
+        * Wpływa bezpośrednio na **Filar 4: Rytm i Regularność Wpłat**.
+   * Każde wydarzenie definiuje:
      * `data_zbiorki_od` oraz `data_wymagalnosci_do`
-     * `dni_zbiorki_przed` (1–90 dni, np. 5–7 dni w małych kołach, 14–30 dni w dużych)
-     * `dni_wymagalnosci_po` (dopuszczalny poślizg 0–3 dni, maksymalnie 3 dni po zebraniu)
-   * **Uwzględnianie zebrań w oknie zbiórki i nadchodzących**:
-     * Zebrania są włączane do ratingu Celestia nie tylko wstecz, ale również gdy okno zbiórki jest już otwarte (`d_od <= dzis`) lub gdy termin zebrania przypada w horyzoncie 30 dni (`d_glos <= dzis + 30 dni`).
-     * Pozwala to skarbnikowi i członkom na bieżąco monitorować prawa głosu i wywiązywanie się ze składek przed samym zebraniem (do terminu zebrania w danym miesiącu nie nalicza się nowa składka).
-   * **Waga czasowa (*time-decay*)**: `waga_czasu = exp(-0.0018 * dni_od_glosowania)` faworyzuje najświeższe zachowania płatnicze (dla bieżących i nadchodzących zebrań `dni_od_glos = 0`, waga = 1.0).
-3. **Wagi Filarów Scoringowych**:
-   * **Głosowania i Zapadalność (VDC)**: **65%** — kluczowy wyznacznik wiarygodności.
+     * `dni_zbiorki_przed` (1–90 dni)
+     * `dni_wymagalnosci_po` (dopuszczalny poślizg 0–3 dni, maksymalnie 3 dni)
+   * **Uwzględnianie terminów w oknie zbiórki i nadchodzących**:
+     * Terminy są włączane do ratingu Celestia nie tylko wstecz, ale również gdy okno zbiórki jest już otwarte (`d_od <= dzis`) lub gdy termin przypada w horyzoncie 30 dni (`d_termin <= dzis + 30 dni`).
+   * **Waga czasowa (*time-decay*)**: `waga_czasu = exp(-0.0018 * dni_od_terminu)` faworyzuje najświeższe zachowania płatnicze.
+3. **Wagi Filarów Scoringowych i Nowy Rytm Kwartalny**:
+   * **Głosowania i Zapadalność (VDC)**: **65%** — kluczowy wyznacznik wiarygodności (tylko zdarzenia `GLOSOWANIE`).
    * **Bieżące Saldo i Karencja**: **20%** — stały bezpiecznik stanu konta (twarde zero dopiero po 36 msc długu).
    * **Wskaźnik Pokrycia KDI**: **10%** — bilans wpłat do naliczeń.
-   * **Rytm i Regularność Wpłat**: **5%** — ciągłość i rytmika transakcji.
+   * **Rytm i Regularność Wpłat**: **5%** — **zorientowany na model kwartalny**:
+     * Wpłaty co kwartał (średnio do 105 dni na wpłatę) dają wzorcowe **1000 pkt** (zamiast sztucznie zaniżanych 850 pkt).
+     * Jeśli koło zarejestrowało zbiórki kwartalne (`KWARTALNY`), filar łączy realizację wyznaczonych zbiórek kwartalnych (60%) z ogólną kadencją wpłat (40%).
+     * Jeśli koło nie ogłaszało jeszcze zbiórek kwartalnych, ocena bazuje w 100% na ogólnej kadencji kwartalnej.
 4. **Zabezpieczenie przed Symboliczną Wpłatą i Progresywna Skala Zapadalności**:
    * Okienko poślizgu (maksymalnie 3 dni po zebraniu) jest uznawane **wyłącznie wtedy, gdy wpłata faktycznie pokrywa całe zadłużenie** (`saldo_na_glos_gr + wplaty_poslizg_gr >= 0`). Termin wymagalności na 100 pkt przypada na dzień zebrania (`d_glos`), a poślizg jest ściśle ograniczony do 3 dni.
    * **Progresywna skala VDC zależna od czasu trwania długu**:

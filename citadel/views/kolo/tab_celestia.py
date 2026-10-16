@@ -199,25 +199,42 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
     # PODZAKŁADKA 2: REJESTR DNI GŁOSOWAŃ (WYMAGALNOŚCI)
     # =========================================================================
     with sub_cel2:
-        st.markdown("#### 🗳️ Rejestr Dni Głosowań (Terminów Zapadalności Koła)")
+        st.markdown("#### 🗳️ Rejestr Dni Głosowań i Wymagalności Koła")
         st.caption(
-            "Wprowadź daty walnych zebrań, zjazdów lub głosowań uchwał w tym kole. Każdy wpis staje się oficjalnym "
-            "punktem zapadalności dla algorytmu Celestia, badając czy składki zostały uregulowane w okienku przed zebraniem."
+            "Wprowadź oficjalne terminy zapadalności dla koła. System obsługuje dwa rodzaje wydarzeń:\n"
+            "1. **🗳️ Głosowanie / Zebranie koła** — punkt weryfikacji prawa głosu (filar VDC — 65% ratingu).\n"
+            "2. **📆 Zbiórka kwartalna / Dzień wymagalności** — wyznacza kwartalny rytm wpłat (filar Rytmu — **nie zalicza się jako głosowanie** i nie zaburza praw głosu)."
         )
 
-        st.markdown("##### ➕ Nowe Głosowanie / Zebranie Koła")
-        st.caption("Skonfiguruj datę zebrania oraz okno zbiórki. Zmiana parametrów natychmiast przelicza podgląd na żywo.")
+        st.markdown("##### ➕ Nowe Wydarzenie / Termin Wymagalności")
+        st.caption("Skonfiguruj kategorię, datę oraz okno zbiórki. Zmiana parametrów natychmiast przelicza podgląd na żywo.")
 
-        # Parametry zebrania i okna umieszczone POZA st.form dla natychmiastowego reaktywnego przeliczania podglądu (preview na żywo)
+        kategoria_wybor = st.radio(
+            "Kategoria terminu wymagalności:",
+            options=["🗳️ Głosowanie / Zebranie (wpływa na prawo głosu VDC)", "📆 Zbiórka Kwartalna (wpływa na rytm wpłat, bez praw głosu)"],
+            horizontal=True,
+            key="celestia_form_kategoria"
+        )
+        czy_glosowanie = "Głosowanie" in kategoria_wybor
+        typ_terminu_kod = "GLOSOWANIE" if czy_glosowanie else "KWARTALNY"
+
         col_g1, col_g2 = st.columns([1, 1])
         with col_g1:
-            nowa_data = st.date_input("Data Głosowania / Zebrania:", value=dzis_pl(), key="celestia_form_data")
+            label_data = "Data Głosowania / Zebrania:" if czy_glosowanie else "Data Wymagalności Kwartalnej:"
+            nowa_data = st.date_input(label_data, value=dzis_pl(), key="celestia_form_data")
         with col_g2:
-            nowa_waga_wybor = st.selectbox(
-                "Ranga wydarzenia:",
-                options=["Zwyczajne (waga 1.0)", "Kluczowe / Wybory Władz (waga 1.5)"],
-                key="celestia_form_waga"
-            )
+            if czy_glosowanie:
+                nowa_waga_wybor = st.selectbox(
+                    "Ranga wydarzenia:",
+                    options=["Zwyczajne (waga 1.0)", "Kluczowe / Wybory Władz (waga 1.5)"],
+                    key="celestia_form_waga"
+                )
+            else:
+                nowa_waga_wybor = st.selectbox(
+                    "Ranga zbiórki kwartalnej:",
+                    options=["Standardowa zbiórka kwartału (waga 1.0)", "Priorytetowa zbiórka zamknięcia roku / budżetu (waga 1.5)"],
+                    key="celestia_form_waga_kw"
+                )
             waga_num = 1.5 if "1.5" in nowa_waga_wybor else 1.0
 
         c_okno1, c_okno2, c_okno3 = st.columns([1, 1, 2])
@@ -226,34 +243,37 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
                 "Długość zbiórki (dni przed):",
                 min_value=1,
                 max_value=90,
-                value=14,
+                value=14 if czy_glosowanie else 21,
                 step=1,
                 key="celestia_form_dni_przed",
-                help="Liczba dni przed zebraniem, od kiedy otwarta jest oficjalna zbiórka składek."
+                help="Liczba dni przed terminem, od kiedy otwarta jest oficjalna zbiórka składek."
             )
         with c_okno2:
             dni_po_input = st.number_input(
-                "Dopuszczalny poślizg (dni po zebraniu):",
+                "Dopuszczalny poślizg (dni po terminie):",
                 min_value=0,
                 max_value=3,
-                value=0,
+                value=0 if czy_glosowanie else 3,
                 step=1,
                 key="celestia_form_dni_po",
-                help="Maksymalnie 3 dni po zebraniu na zaksięgowanie przelewów bankowych. Poślizg nigdy nie przekracza 3 dni."
+                help="Maksymalnie 3 dni po terminie na zaksięgowanie przelewów bankowych. Poślizg nigdy nie przekracza 3 dni."
             )
         with c_okno3:
             data_od_domyslna = nowa_data - timedelta(days=int(dni_przed_input))
             data_do_domyslna = nowa_data + timedelta(days=int(dni_po_input))
             dni_lacznie = (nowa_data - data_od_domyslna).days + 1
-            poslizg_text = f" + poślizg do **{data_do_domyslna}** ({dni_po_input} dni)" if dni_po_input > 0 else " (brak poślizgu — termin do dnia zebrania)"
-            st.info(f"📅 **Okno zbiórki przed zebraniem:** od **{data_od_domyslna}** do **{nowa_data}** ({dni_lacznie} dni na terminową wpłatę){poslizg_text}.")
+            poslizg_text = f" + poślizg do **{data_do_domyslna}** ({dni_po_input} dni)" if dni_po_input > 0 else " (brak poślizgu — termin do dnia wydarzenia)"
+            label_okno = "Okno zbiórki przed zebraniem:" if czy_glosowanie else "Okno zbiórki kwartalnej:"
+            st.info(f"📅 **{label_okno}** od **{data_od_domyslna}** do **{nowa_data}** ({dni_lacznie} dni na terminową wpłatę){poslizg_text}.")
 
-        # Formularz z clear_on_submit=True dla nazwy i opisu
+        placeholder_nazwa = "np. Walne Zebranie Członków, Wybory Władz Koła" if czy_glosowanie else "np. Zbiórka składek za I kwartał 2026, Rozliczenie Q2"
+        btn_label = "➕ Zarejestruj Termin Głosowania" if czy_glosowanie else "➕ Zarejestruj Zbiórkę Kwartalną"
+
         with st.form("form_dodaj_glosowanie", clear_on_submit=True):
-            nowa_nazwa = st.text_input("Nazwa / Okazja wydarzenia:", placeholder="np. Walne Zebranie Członków, Wybory Władz Koła")
+            nowa_nazwa = st.text_input("Nazwa / Okazja wydarzenia:", placeholder=placeholder_nazwa)
             nowy_opis = st.text_input("Opcjonalny opis / uwagi:", placeholder="np. Wymóg braku zadłużenia na dzień otwarcia obrad")
 
-            btn_dodaj = st.form_submit_button("➕ Zarejestruj Termin Głosowania", use_container_width=True)
+            btn_dodaj = st.form_submit_button(btn_label, use_container_width=True)
             if btn_dodaj:
                 if not nowa_nazwa.strip():
                     st.error("Wprowadź nazwę wydarzenia!")
@@ -268,19 +288,20 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
                         dni_wymagalnosci_po=int(dni_po_input),
                         opis=nowy_opis,
                         waga=waga_num,
+                        typ_terminu=typ_terminu_kod,
                         user_id=curr_user_id
                     )
-                    st.success(f"Pomyślnie zarejestrowano termin: '{nowa_nazwa}' (Zbiórka od {data_od_domyslna} do {nowa_data}).")
+                    st.success(f"Pomyślnie zarejestrowano termin: '{nowa_nazwa}' ({'Głosowanie VDC' if czy_glosowanie else 'Zbiórka Kwartalna'}).")
                     st.rerun()
 
         st.markdown("---")
-        st.markdown("#### 📅 Zarejestrowane Terminy Głosowań w Kole")
+        st.markdown("#### 📅 Zarejestrowane Terminy Głosowań i Wymagalności w Kole")
 
         terminy_df = pobierz_terminy_glosowan_kola(wybrane_kolo_id)
         if terminy_df.empty:
             st.info(
-                "Koło nie ma jeszcze zarejestrowanych terminów głosowań. "
-                "Użyj powyższego formularza, aby dodać pierwsze zebranie i aktywować pełne wagi zapadalności w Celestii!"
+                "Koło nie ma jeszcze zarejestrowanych terminów. "
+                "Użyj powyższego formularza, aby dodać pierwsze zebranie lub zbiórkę kwartalną!"
             )
         else:
             # Prezentacja tabeli terminów z opcją usuwania
@@ -290,6 +311,8 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
                 dni_przed = int(_num(r.get("dni_zbiorki_przed"), 14))
                 dni_po = min(3, max(0, int(_num(r.get("dni_wymagalnosci_po"), 0))))
                 waga_val = float(_num(r.get("waga"), 1.0))
+                typ_val = str(r.get("typ_terminu") or "GLOSOWANIE").upper().strip()
+                kategoria_badge = "🗳️ Głosowanie" if typ_val == "GLOSOWANIE" else "📆 Zbiórka Kwartalna"
 
                 d_od = r["data_zbiorki_od"] if pd.notna(r.get("data_zbiorki_od")) else (d_glos - timedelta(days=dni_przed))
                 d_do = d_glos + timedelta(days=dni_po)
@@ -297,7 +320,8 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
 
                 tablica_terminow.append({
                     "ID": r["id"],
-                    "Data Głosowania": str(d_glos),
+                    "Kategoria": kategoria_badge,
+                    "Data Terminu": str(d_glos),
                     "Nazwa Wydarzenia": r["nazwa"],
                     "Okno Zbiórki": f"{d_od} → {d_glos} ({dni_trwania} dni)",
                     "Dopuszczalny Poślizg": f"{dni_po} dni (do {d_do})" if dni_po > 0 else "Brak poślizgu (0 dni)",
@@ -309,16 +333,19 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
 
             df_t = pd.DataFrame(tablica_terminow)
             st.dataframe(
-                df_t[["Data Głosowania", "Nazwa Wydarzenia", "Okno Zbiórki", "Dopuszczalny Poślizg", "Ranga / Waga", "Opis", "Zarejestrował", "Data Wpisu"]],
+                df_t[["Kategoria", "Data Terminu", "Nazwa Wydarzenia", "Okno Zbiórki", "Dopuszczalny Poślizg", "Ranga / Waga", "Opis", "Zarejestrował", "Data Wpisu"]],
                 width="stretch",
                 hide_index=True
             )
 
             # Sekcja usuwania wpisu
-            st.markdown("##### 🗑️ Usuwanie terminu głosowania")
+            st.markdown("##### 🗑️ Usuwanie terminu wymagalności")
             c_del1, c_del2 = st.columns([3, 1])
             with c_del1:
-                opcje_usun = {r["id"]: f"{r['data_glosowania']} — {r['nazwa']}" for _, r in terminy_df.iterrows()}
+                opcje_usun = {
+                    r["id"]: f"[{'Głosowanie' if str(r.get('typ_terminu') or 'GLOSOWANIE').upper() == 'GLOSOWANIE' else 'Zbiórka Q'}] {r['data_glosowania']} — {r['nazwa']}"
+                    for _, r in terminy_df.iterrows()
+                }
                 wybrany_do_usun = st.selectbox(
                     "Wybierz termin do usunięcia:",
                     options=list(opcje_usun.keys()),
@@ -328,6 +355,6 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
             with c_del2:
                 if st.button("Usuń wybrany termin", type="secondary", use_container_width=True):
                     usun_termin_glosowania(wybrany_do_usun, wybrane_kolo_id)
-                    st.success("Usunięto wybrany termin głosowania. Przeliczono ratingi.")
+                    st.success("Usunięto wybrany termin wymagalności. Przeliczono ratingi.")
                     st.rerun()
 

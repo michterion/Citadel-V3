@@ -263,34 +263,41 @@ def oblicz_rating_celestia_dla_czlonka(
     vdc_score = None
 
     glosowania_w_stazu = []
+    terminy_kwartalne_w_stazu = []
     if terminy_glosowan_df is not None and not terminy_glosowan_df.empty:
         for _, row_g in terminy_glosowan_df.iterrows():
-            d_glos = parse_date(row_g["data_glosowania"])
+            typ_terminu = str(row_g.get("typ_terminu") or "GLOSOWANIE").upper().strip()
+            d_termin = parse_date(row_g["data_glosowania"])
 
             # Dynamiczny termin otwarcia zbiórki
             if pd.notna(row_g.get("data_zbiorki_od")):
                 d_od = parse_date(row_g["data_zbiorki_od"])
             else:
                 dni_przed = int(_num(row_g.get("dni_zbiorki_przed"), 14))
-                d_od = d_glos - timedelta(days=dni_przed)
+                d_od = d_termin - timedelta(days=dni_przed)
 
-            # Dynamiczny termin poślizgu (maksymalnie 3 dni po zebraniu)
+            # Dynamiczny termin poślizgu (maksymalnie 3 dni po zebraniu / terminie)
             dni_po = min(3, max(0, int(_num(row_g.get("dni_wymagalnosci_po"), 0))))
-            d_do = d_glos + timedelta(days=dni_po)
+            d_do = d_termin + timedelta(days=dni_po)
 
-            # Uwzględniamy głosowania:
-            # 1. Członek wstąpił przed lub w dniu zebrania (d_glos >= efektywna_data_wst)
-            # 2. Zebranie już się odbyło LUB okno zbiórki jest już otwarte (d_od <= dzis) LUB zebranie odbędzie się w ciągu 30 dni
-            if d_glos >= efektywna_data_wst and (d_glos <= dzis or d_od <= dzis or d_glos <= dzis + timedelta(days=30)):
-                glosowania_w_stazu.append({
+            # Uwzględniamy terminy:
+            # 1. Członek wstąpił przed lub w dniu terminu (d_termin >= efektywna_data_wst)
+            # 2. Termin już się odbył LUB okno zbiórki jest już otwarte (d_od <= dzis) LUB termin odbędzie się w ciągu 30 dni
+            if d_termin >= efektywna_data_wst and (d_termin <= dzis or d_od <= dzis or d_termin <= dzis + timedelta(days=30)):
+                obiekt_t = {
                     "id": row_g.get("id"),
-                    "data": d_glos,
+                    "data": d_termin,
                     "data_zbiorki_od": d_od,
                     "data_wymagalnosci_do": d_do,
                     "dni_wymagalnosci_po": dni_po,
-                    "nazwa": row_g.get("nazwa", "Głosowanie Koła"),
-                    "waga": float(_num(row_g.get("waga"), 1.0))
-                })
+                    "nazwa": row_g.get("nazwa", "Głosowanie Koła" if typ_terminu == "GLOSOWANIE" else "Zbiórka Kwartalna"),
+                    "waga": float(_num(row_g.get("waga"), 1.0)),
+                    "typ_terminu": typ_terminu
+                }
+                if typ_terminu == "KWARTALNY":
+                    terminy_kwartalne_w_stazu.append(obiekt_t)
+                else:
+                    glosowania_w_stazu.append(obiekt_t)
 
     if glosowania_w_stazu:
         # Sortowanie chronologiczne
@@ -479,30 +486,111 @@ def oblicz_rating_celestia_dla_czlonka(
             saldo_score = max(0, int(round(250 - (m_dlug - 6.0) * (250 / 30.0))))
 
     # ---------------------------------------------------------------------
-    # FILAR 4: Rytm i Regularność Wpłat - Waga: 5%
+    # FILAR 4: Rytm i Regularność Wpłat - Waga: 5% (Model Zbiórek Kwartalnych)
     # ---------------------------------------------------------------------
     liczba_wplat = len(wplaty_map)
     staz_dni = max(1, (dzis - efektywna_data_wst).days)
+    audyt_kwartalny = []
 
+    # 1. Bazowa kadencja wpłat: model oparty na zbieraniu kwartalnym
+    # W kole zbieramy składki kwartalnie, więc płacenie kwartalne (średnio ≤ 105 dni) daje pełne 1000 pkt.
     if liczba_wplat == 0:
-        rytm_score = 800 if (dane_czlonka.get("naliczone_gr", 0) == 0 and saldo_akt_gr >= 0) else 50
+        kadencja_score = 1000 if (dane_czlonka.get("naliczone_gr", 0) == 0 and saldo_akt_gr >= 0) else 50
+        srednio_dni_na_wplate = None
     else:
         srednio_dni_na_wplate = staz_dni / liczba_wplat
-        if srednio_dni_na_wplate <= 45:
-            rytm_score = 1000  # comiesięcznie lub częściej
-        elif srednio_dni_na_wplate <= 100:
-            rytm_score = 850   # kwartalnie
+        if srednio_dni_na_wplate <= 105:
+            kadencja_score = 1000  # kwartalnie lub częściej (wzorzec statutowy)
         elif srednio_dni_na_wplate <= 200:
-            rytm_score = 650   # półrocznie
+            kadencja_score = 800   # półrocznie
         elif srednio_dni_na_wplate <= 380:
-            rytm_score = 450   # rocznie
+            kadencja_score = 600   # rocznie
         else:
-            rytm_score = 250
+            kadencja_score = 350   # rzadziej niż rocznie
 
-        # Bonus jeśli była wpłata w ciągu ostatnich 90 dni
+        # Bonus za świeżą wpłatę w bieżącym okresie kwartalnym (ostatnie 105 dni)
         ostatnia_wplata = max(wplaty_map.keys())
-        if (dzis - ostatnia_wplata).days <= 90:
-            rytm_score = min(1000, rytm_score + 100)
+        if (dzis - ostatnia_wplata).days <= 105:
+            kadencja_score = min(1000, kadencja_score + 100)
+
+    # 2. Dedykowana ocena wyznaczonych zbiórek kwartalnych (jeśli koło je zarejestrowało)
+    if terminy_kwartalne_w_stazu:
+        terminy_kwartalne_w_stazu = sorted(terminy_kwartalne_w_stazu, key=lambda x: x["data"])
+        suma_wazona_kw = 0.0
+        suma_wag_kw = 0.0
+
+        for q in terminy_kwartalne_w_stazu:
+            d_q = q["data"]
+            waga_q = q["waga"]
+            okno_start = q["data_zbiorki_od"]
+            dni_poslizgu = min(3, max(0, int(q.get("dni_wymagalnosci_po", 0))))
+
+            sum_wpl_do_q = sum(kw for d, kw in wplaty_map.items() if d <= d_q)
+            sum_rec_do_q = sum(kw for d, kw in reczne_map.items() if d <= d_q)
+            sum_kor_do_q = sum(kw for d, kw in korekty_map.items() if d <= d_q)
+            nal_auto_do_q, _ = oblicz_naliczenia_gr(efektywna_data_wst, data_ur, reczny_param, d_q)
+            saldo_na_q_gr = saldo_start_gr + sum_wpl_do_q + sum_kor_do_q - (nal_auto_do_q + sum_rec_do_q)
+
+            wplaty_w_oknie_gr = sum(kw for d, kw in wplaty_map.items() if okno_start <= d <= d_q)
+            if dni_poslizgu > 0:
+                okno_poslizgu = d_q + timedelta(days=dni_poslizgu)
+                wplaty_poslizg_gr = sum(kw for d, kw in wplaty_map.items() if d_q < d <= okno_poslizgu)
+            else:
+                wplaty_poslizg_gr = 0
+
+            saldo_po_poslizgu_gr = saldo_na_q_gr + wplaty_poslizg_gr
+            _, stawka_q_gr = pobierz_stawke_za_miesiac(efektywna_data_wst, data_ur, reczny_param, d_q)
+            stawka_q_gr = max(stawka_q_gr, 600)
+
+            if saldo_na_q_gr >= 0:
+                pkt_q = 100
+                status_q = "Opłacono w terminie (brak długu)"
+            elif wplaty_poslizg_gr > 0 and saldo_po_poslizgu_gr >= 0:
+                pkt_q = 90
+                status_q = f"Opłacono w poślizgu (+{dni_poslizgu} dni)"
+            elif wplaty_w_oknie_gr > 0:
+                pkt_q = 65
+                status_q = "Częściowa wpłata w oknie zbiórki"
+            else:
+                m_dlugu_q = abs(saldo_na_q_gr) / max(stawka_q_gr, 1)
+                if m_dlugu_q <= 1.0:
+                    pkt_q = 50
+                    status_q = "Niewielkie opóźnienie (≤ 1 msc długu)"
+                elif m_dlugu_q <= 3.0:
+                    pkt_q = 30
+                    status_q = "Zaległość kwartalna (1–3 msc długu)"
+                else:
+                    pkt_q = 10
+                    status_q = "Brak wpłaty na zbiórkę kwartalną (> 3 msc długu)"
+
+            dni_od_q = max(0, (dzis - d_q).days) if d_q <= dzis else 0
+            waga_czasu = math.exp(-0.0018 * dni_od_q)
+            efektywna_waga = waga_q * waga_czasu
+
+            suma_wazona_kw += pkt_q * efektywna_waga
+            suma_wag_kw += efektywna_waga
+
+            audyt_kwartalny.append({
+                "id": q["id"],
+                "data": str(d_q),
+                "nazwa": q["nazwa"],
+                "okres_zbiorki": f"{okno_start} → {d_q}",
+                "data_wymagalnosci": str(d_q + timedelta(days=dni_poslizgu)) if dni_poslizgu > 0 else str(d_q),
+                "saldo_pln": round(saldo_na_q_gr / 100.0, 2),
+                "wplata_w_oknie_pln": round(wplaty_w_oknie_gr / 100.0, 2),
+                "punkty": pkt_q,
+                "status": status_q,
+                "waga": waga_q
+            })
+
+        kwartalne_score = int(round((suma_wazona_kw / suma_wag_kw) * 10.0)) if suma_wag_kw > 0 else 1000
+        # Połączenie: 60% dyscypliny w ogłoszonych zbiórkach kwartalnych + 40% ogólnej kadencji wpłat
+        rytm_score = int(round(0.60 * kwartalne_score + 0.40 * kadencja_score))
+    else:
+        kwartalne_score = None
+        rytm_score = kadencja_score
+
+    rytm_score = max(0, min(1000, rytm_score))
 
     # ---------------------------------------------------------------------
     # SYNTEZA CAŁKOWITEGO SCORE (0 - 1000)
@@ -539,9 +627,13 @@ def oblicz_rating_celestia_dla_czlonka(
             "kdi_score": kdi_score,
             "saldo_score": saldo_score,
             "rytm_score": rytm_score,
-            "liczba_glosowan": len(glosowania_w_stazu)
+            "liczba_glosowan": len(glosowania_w_stazu),
+            "liczba_kwartalnych": len(terminy_kwartalne_w_stazu),
+            "kwartalne_score": kwartalne_score,
+            "kadencja_dni": round(srednio_dni_na_wplate, 1) if srednio_dni_na_wplate is not None else None
         },
-        "audyt_glosowan": list(reversed(audyt_glosowan))  # najnowsze u góry
+        "audyt_glosowan": list(reversed(audyt_glosowan)),  # najnowsze u góry
+        "audyt_kwartalny": list(reversed(audyt_kwartalny))
     }
 
 def przelicz_celestia_dla_calego_kola(kolo_id: int, dane_przeliczone: list, dzis: date) -> list:
@@ -617,6 +709,7 @@ def przelicz_celestia_dla_calego_kola(kolo_id: int, dane_przeliczone: list, dzis
         d_kopia["celestia_opis"] = res_celestia["opis_poziomu"]
         d_kopia["celestia_filary"] = res_celestia["filary"]
         d_kopia["celestia_audyt_glosowan"] = res_celestia["audyt_glosowan"]
+        d_kopia["celestia_audyt_kwartalny"] = res_celestia.get("audyt_kwartalny", [])
         wyniki_rozszerzone.append(d_kopia)
 
     return wyniki_rozszerzone

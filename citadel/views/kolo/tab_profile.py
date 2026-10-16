@@ -186,7 +186,14 @@ def render_tab_profile(dane_przeliczone, dzis):
         rytm_score = filary.get('rytm_score', 0)
         kolor_rytm = pobierz_kolor_celestia(rytm_score, is_light)
         styl_rytm = f"color: {kolor_rytm}; text-shadow: 0 0 14px {kolor_rytm};"
-        render_bento_card("Rytm Płatności (5%)", f"{rytm_score} pkt", f"Liczba wpłat: {len(hist_wplaty)}", styl_custom=styl_rytm)
+        kadencja_val = filary.get("kadencja_dni")
+        kadencja_txt = f"Śr. co {kadencja_val:.0f} dni" if kadencja_val is not None else f"{len(hist_wplaty)} wpłat"
+        ile_q = filary.get("liczba_kwartalnych", 0)
+        if ile_q > 0:
+            sub_rytm = f"{kadencja_txt} | Zbiórki Q: {ile_q}"
+        else:
+            sub_rytm = f"Kadencja: {kadencja_txt} (kwartalna)"
+        render_bento_card("Rytm Płatności (5%)", f"{rytm_score} pkt", sub_rytm, styl_custom=styl_rytm)
 
     audyt_glosowan = osoba.get("celestia_audyt_glosowan", [])
     if audyt_glosowan:
@@ -218,4 +225,33 @@ def render_tab_profile(dane_przeliczone, dzis):
         st.dataframe(styler_audyt, width="stretch", hide_index=True)
     else:
         st.info("Brak zarejestrowanych terminów głosowań przypadających w trakcie członkostwa tej osoby.")
+
+    audyt_kwartalny = osoba.get("celestia_audyt_kwartalny", [])
+    if audyt_kwartalny:
+        st.markdown("#### 📆 Historia Zbiórek Kwartalnych Koła")
+        st.caption("Ocena terminowości wpłat w wyznaczonych dniach wymagalności kwartalnej (filar Rytmu — bez wpływu na prawa głosu):")
+        df_audyt_kw = pd.DataFrame([
+            {
+                "Data Zbiórki": a["data"],
+                "Nazwa Zbiórki": a["nazwa"],
+                "Okno Zbiórki": a.get("okres_zbiorki", "—"),
+                "Wymagalność do": a.get("data_wymagalnosci", a["data"]),
+                "Saldo na Termin": f"{a['saldo_pln']:.2f} zł",
+                "Wpłata w Oknie": f"{a['wplata_w_oknie_pln']:.2f} zł",
+                "Ocena (0-100)": f"{a['punkty']} pkt",
+                "Status": a["status"]
+            }
+            for a in audyt_kwartalny
+        ])
+
+        def stylizuj_ocena_kwartalna(val):
+            try:
+                pkt_num = int(str(val).replace(" pkt", "").strip())
+                kolor = pobierz_kolor_celestia(pkt_num * 10, is_light)
+                return f"color: {kolor}; font-weight: 800;"
+            except Exception:
+                return ""
+
+        styler_audyt_kw = df_audyt_kw.style.map(stylizuj_ocena_kwartalna, subset=["Ocena (0-100)"])
+        st.dataframe(styler_audyt_kw, width="stretch", hide_index=True)
 

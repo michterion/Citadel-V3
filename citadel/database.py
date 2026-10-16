@@ -1,13 +1,13 @@
-import os
 import json
+import os
 from datetime import datetime
+
 import pandas as pd
 import streamlit as st
-import psycopg
-from psycopg import errors
-from psycopg_pool import ConnectionPool
 from config import WARSAW_TZ, teraz_utc
+from psycopg_pool import ConnectionPool
 from rbac import generuj_sol, hashuj_haslo
+
 
 def get_db_conninfo():
     try:
@@ -190,6 +190,7 @@ CREATE TABLE IF NOT EXISTS terminy_glosowan (
     nazwa TEXT NOT NULL,
     opis TEXT,
     waga NUMERIC(3,2) NOT NULL DEFAULT 1.0,
+    typ_terminu TEXT NOT NULL DEFAULT 'GLOSOWANIE',
     utworzono_o TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     utworzono_przez BIGINT REFERENCES uzytkownicy(id) ON DELETE SET NULL
 );
@@ -373,6 +374,7 @@ def init_db_once():
                     nazwa TEXT NOT NULL,
                     opis TEXT,
                     waga NUMERIC(3,2) NOT NULL DEFAULT 1.0,
+                    typ_terminu TEXT NOT NULL DEFAULT 'GLOSOWANIE',
                     utworzono_o TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     utworzono_przez BIGINT REFERENCES uzytkownicy(id) ON DELETE SET NULL
                 );
@@ -387,6 +389,7 @@ def init_db_once():
             cur.execute("ALTER TABLE terminy_glosowan ADD COLUMN IF NOT EXISTS data_wymagalnosci_do DATE;")
             cur.execute("ALTER TABLE terminy_glosowan ADD COLUMN IF NOT EXISTS dni_zbiorki_przed INT NOT NULL DEFAULT 14;")
             cur.execute("ALTER TABLE terminy_glosowan ADD COLUMN IF NOT EXISTS dni_wymagalnosci_po INT NOT NULL DEFAULT 0;")
+            cur.execute("ALTER TABLE terminy_glosowan ADD COLUMN IF NOT EXISTS typ_terminu TEXT NOT NULL DEFAULT 'GLOSOWANIE';")
 
             # Indeksy wydajnościowe na kluczach obcych i filtrach
             cur.execute("""
@@ -550,11 +553,11 @@ def przywroc_kolo_z_kosza(kolo_id: int):
         JOIN regiony r ON k.region_id = r.id 
         WHERE k.id = %s
     """, (kolo_id,))
-    
+
     if not region_info.empty and region_info.iloc[0]["is_deleted"]:
         nazwa_r = region_info.iloc[0]["nazwa"]
         raise ValueError(f"Nie można przywrócić koła: jego region nadrzędny ('{nazwa_r}') znajduje się w koszu!")
-        
+
     db_execute("""
         UPDATE kola 
         SET is_deleted = FALSE, deleted_at = NULL, deleted_by_region_id = NULL 
@@ -644,9 +647,9 @@ def generuj_zrzut_bazy_sql():
     timestamp_str = datetime.now(WARSAW_TZ).strftime("%Y%m%d_%H%M%S")
     filename = f"citadel_backup_{timestamp_str}.sql"
     filepath = os.path.join("backups", filename)
-    
+
     tabele_parent_to_child = [
-        "kraje", "regiony", "kola", "uzytkownicy", "czlonkowie", 
+        "kraje", "regiony", "kola", "uzytkownicy", "czlonkowie",
         "wplaty", "wplaty_oczekujace", "naliczenia_reczne", "korekty", "wydatki", "korekty_kasy", "terminy_glosowan", "audit_log"
     ]
     tabele_child_to_parent = tabele_parent_to_child[::-1]
@@ -667,7 +670,7 @@ def generuj_zrzut_bazy_sql():
         f_out.write("BEGIN;\n\n")
         f_out.write(DDL_SCHEMA_EXPORT)
         f_out.write("\n-- === CZYSZCZENIE DANYCH PRZED IMPORTEM ===\n")
-        
+
         truncate_list = ", ".join([f'"{t}"' for t in tabele_child_to_parent])
         f_out.write(f"TRUNCATE TABLE {truncate_list} CASCADE;\n\n")
 
@@ -683,7 +686,7 @@ def generuj_zrzut_bazy_sql():
                     cols_info = cur.fetchall()
                     if not cols_info:
                         continue
-                    
+
                     col_names = [c[0] for c in cols_info]
                     has_always_identity = any(c[1] == 'ALWAYS' for c in cols_info)
                     overriding_clause = " OVERRIDING SYSTEM VALUE" if has_always_identity else ""
@@ -696,7 +699,7 @@ def generuj_zrzut_bazy_sql():
                     for r in rows:
                         vals = [format_val_sql(v) for v in r]
                         f_out.write(f'INSERT INTO "{tab}" ({col_names_escaped}){overriding_clause} VALUES ({", ".join(vals)});\n')
-                    
+
                     if rows:
                         f_out.write(f'SELECT setval(pg_get_serial_sequence(\'"{tab}"\', \'id\'), COALESCE(max(id), 1)) FROM "{tab}";\n')
 
@@ -710,7 +713,7 @@ def pobierz_terminy_glosowan_kola(kolo_id: int):
     """Pobiera wszystkie zarejestrowane terminy głosowań / wymagalności dla danego koła."""
     return db_query("""
         SELECT tg.id, tg.kolo_id, tg.data_glosowania, tg.data_zbiorki_od, tg.data_wymagalnosci_do,
-               tg.dni_zbiorki_przed, tg.dni_wymagalnosci_po, tg.nazwa, tg.opis, tg.waga, 
+               tg.dni_zbiorki_przed, tg.dni_wymagalnosci_po, tg.nazwa, tg.opis, tg.waga, tg.typ_terminu,
                tg.utworzono_o, tg.utworzono_przez, u.imie_nazwisko as dodal_imie
         FROM terminy_glosowan tg
         LEFT JOIN uzytkownicy u ON tg.utworzono_przez = u.id
@@ -719,33 +722,34 @@ def pobierz_terminy_glosowan_kola(kolo_id: int):
     """, (kolo_id,))
 
 def dodaj_termin_glosowania(
-    kolo_id: int, 
-    data_glosowania, 
-    nazwa: str, 
-    data_zbiorki_od = None, 
-    data_wymagalnosci_do = None, 
-    dni_zbiorki_przed: int = 14, 
+    kolo_id: int,
+    data_glosowania,
+    nazwa: str,
+    data_zbiorki_od = None,
+    data_wymagalnosci_do = None,
+    dni_zbiorki_przed: int = 14,
     dni_wymagalnosci_po: int = 0,
-    opis: str = None, 
-    waga: float = 1.0, 
+    opis: str = None,
+    waga: float = 1.0,
+    typ_terminu: str = "GLOSOWANIE",
     user_id: int = None
 ):
-    """Rejestruje nowy termin głosowania dla koła z konfigurowalnym oknem zbiórki i terminem wymagalności."""
+    """Rejestruje nowy termin głosowania lub zbiórki kwartalnej dla koła."""
     db_execute("""
         INSERT INTO terminy_glosowan (
-            kolo_id, data_glosowania, data_zbiorki_od, data_wymagalnosci_do, 
-            dni_zbiorki_przed, dni_wymagalnosci_po, nazwa, opis, waga, utworzono_przez
+            kolo_id, data_glosowania, data_zbiorki_od, data_wymagalnosci_do,
+            dni_zbiorki_przed, dni_wymagalnosci_po, nazwa, opis, waga, typ_terminu, utworzono_przez
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """, (
         kolo_id, data_glosowania, data_zbiorki_od, data_wymagalnosci_do,
-        int(dni_zbiorki_przed), int(dni_wymagalnosci_po), nazwa.strip(), 
-        opis.strip() if opis else None, float(waga), user_id
+        int(dni_zbiorki_przed), int(dni_wymagalnosci_po), nazwa.strip(),
+        opis.strip() if opis else None, float(waga), typ_terminu, user_id
     ))
 
 def usun_termin_glosowania(termin_id: int, kolo_id: int):
     """Usuwa termin głosowania dla danego koła."""
     db_execute("""
-        DELETE FROM terminy_glosowan 
+        DELETE FROM terminy_glosowan
         WHERE id = %s AND kolo_id = %s
     """, (termin_id, kolo_id))
