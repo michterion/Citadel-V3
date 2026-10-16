@@ -42,19 +42,20 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
         mediana_score = int(round(statistics.median(scores_kola))) if scores_kola else 0
         srednia_score = int(round(sum(scores_kola) / max(total_czlonkow, 1))) if scores_kola else 0
 
-        # Wyznaczenie ratingu koła na podstawie MEDIANY (odpornej na skrajności)
+        # Wyznaczenie ratingu koła na podstawie ŚREDNIEJ (główna wartość) oraz MEDIANY (podtytuł)
         from celestia import pobierz_definicje_ratingu
+        def_srednia = pobierz_definicje_ratingu(srednia_score)
         def_mediana = pobierz_definicje_ratingu(mediana_score)
-        kolor_mediana = def_mediana["kolor_light"] if is_light else def_mediana["kolor_dark"]
+        kolor_srednia = def_srednia["kolor_light"] if is_light else def_srednia["kolor_dark"]
 
         # 4 Bento Cards podsumowujące koło
         col_c1, col_c2, col_c3, col_c4 = st.columns(4)
         with col_c1:
             render_bento_card(
-                "Indeks Wiarygodności Koła (Mediana)",
-                f"{def_mediana['kod']} ({mediana_score} pkt)",
-                f"Mediana Celestia (Średnia: {srednia_score} pkt)",
-                styl_custom=f"color: {kolor_mediana}; text-shadow: 0 0 14px {kolor_mediana};"
+                "Indeks Wiarygodności Koła",
+                f"{def_srednia['kod']} ({srednia_score} pkt)",
+                f"Mediana Celestia: {def_mediana['kod']} ({mediana_score} pkt)",
+                styl_custom=f"color: {kolor_srednia}; text-shadow: 0 0 14px {kolor_srednia};"
             )
         with col_c2:
             pct_prime = (liczba_prime / total_czlonkow * 100) if total_czlonkow > 0 else 0

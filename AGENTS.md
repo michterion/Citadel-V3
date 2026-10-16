@@ -109,10 +109,9 @@ Ten plik stanowi trwałą pamięć projektu dla asystentów AI (Antigravity). Za
      * `18–28 msc`: **30 pkt** (brak) / **100 pkt** (poślizg) — zadłużenie wieloletnie, ~160–250 zł (klasa DD).
      * `> 28 msc`: **0 pkt** (brak) / **50 pkt** (poślizg) — skrajny default, > 350–450 zł (klasa DDD).
    * Dzięki temu osoba z długiem ~150 zł ląduje w **D**, z ~200 zł w **DD**, a dopiero notoryczny dłużnik z 400+ zł długu w **DDD**.
-5. **Rating Koła = MEDIANA, a nie Średnia**:
-   * Główny wskaźnik wiarygodności koła jest wyliczany jako **mediana statystyczna** (`statistics.median`) ze scoringów członków.
-   * Średnia arytmetyczna jest podawana jedynie pomocniczo w nawiasie.
-   * Mediana chroni koło przed zafałszowaniem wskaźnika przez pojedyncze osoby nieaktywne/dłużników.
+5. **Indeks Wiarygodności Koła w Kafelku Bento (Średnia + Mediana)**:
+   * W kafelku podsumowującym całe koło główna wartość jest wyliczana i renderowana na kolorowo (z poświatą tekstu) ze **średniej arytmetycznej** scoringów członków.
+   * **Mediana statystyczna** (`statistics.median`) jest prezentowana w podtytule jako szary tekst (`Mediana Celestia: [Kod] ([pkt] pkt)`), chroniąc pełny kontekst analityczny koła.
 6. **Bezpieczne Parsowanie Kolumn SQL / Pandas**:
    * Zawsze stosuj helper `_num(v, d): return d if v is None or pd.isna(v) else v` przy odczytywaniu kolumn z tabeli `terminy_glosowan` (`dni_zbiorki_przed`, `dni_wymagalnosci_po`, `waga`), aby zapobiec `ValueError` przy wartościach `NaN`.
    * Importy parametrów stawek (`pobierz_parametr`) muszą znajdować się na górze modułów, bez cichego tłumienia błędów `except Exception: pass`.
