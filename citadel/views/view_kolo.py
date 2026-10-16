@@ -1,26 +1,26 @@
 import pandas as pd
 import streamlit as st
-
+from calculations import formatuj_wartosc_kdi, oblicz_dynamiczny_prog_kdi_kola, przelicz_finanse_dla_kola
+from celestia import przelicz_celestia_dla_calego_kola
+from components.ui import render_bento_card
 from config import pobierz_kolor_kdi, pobierz_kolor_uprawnionych
 from database import db_query, db_scalar
 from rbac import moze, pobierz_etykiete_roli
-from calculations import przelicz_finanse_dla_kola
-from components.ui import render_bento_card
 
-from views.kolo.tab_zbiorcza import render_tab_zbiorcza
-from views.kolo.tab_profile import render_tab_profile
-from views.kolo.tab_wplaty import render_tab_wplaty
-from views.kolo.tab_reczne import render_tab_reczne
-from views.kolo.tab_kasa import render_tab_kasa
-from views.kolo.tab_korekty import render_tab_korekty
+from views.kolo.tab_akceptacje import render_tab_akceptacje
+from views.kolo.tab_audyt import render_tab_audyt
+from views.kolo.tab_celestia import render_tab_celestia
+from views.kolo.tab_centauri import render_tab_centauri
 from views.kolo.tab_czlonkowie import render_tab_czlonkowie
 from views.kolo.tab_kalkulator import render_tab_kalkulator
-from views.kolo.tab_akceptacje import render_tab_akceptacje
+from views.kolo.tab_kasa import render_tab_kasa
+from views.kolo.tab_korekty import render_tab_korekty
+from views.kolo.tab_profile import render_tab_profile
+from views.kolo.tab_reczne import render_tab_reczne
 from views.kolo.tab_struktura import render_tab_struktura
-from views.kolo.tab_audyt import render_tab_audyt
-from views.kolo.tab_centauri import render_tab_centauri
-from views.kolo.tab_celestia import render_tab_celestia
-from celestia import przelicz_celestia_dla_calego_kola
+from views.kolo.tab_wplaty import render_tab_wplaty
+from views.kolo.tab_zbiorcza import render_tab_zbiorcza
+
 
 def render_view_kolo(zalogowany_uzytkownik, wybrany_kraj_id, wybrany_region_id, nazwa_wybranego_regionu, dzis):
     rola_uzytkownika = zalogowany_uzytkownik["rola"]
@@ -82,6 +82,8 @@ def render_view_kolo(zalogowany_uzytkownik, wybrany_kraj_id, wybrany_region_id, 
     kdi_global_val = round(total_z_gr / total_s_gr, 2) if total_s_gr > 0 else None
     kdi_global_str = f"{kdi_global_val:.2f}" if kdi_global_val is not None else "Brak danych"
     kolor_kdi_global = pobierz_kolor_kdi(kdi_global_val)
+    kdi_prog_val, kdi_prog_str = oblicz_dynamiczny_prog_kdi_kola(dane_przeliczone)
+    wartosc_kdi_html = formatuj_wartosc_kdi(kdi_global_str, kdi_prog_val, kdi_prog_str)
 
     # Bento Cards KPI Koła (Główny pasek koła)
     c1, c2, c3, c4 = st.columns(4)
@@ -91,7 +93,7 @@ def render_view_kolo(zalogowany_uzytkownik, wybrany_kraj_id, wybrany_region_id, 
     with c2:
         render_bento_card("Suma Wpłaconych Składek", f"{(suma_wplat_kola_gr / 100.0):,.2f} PLN", "Wpłacone do kasy tego koła", "accent-cyan")
     with c3:
-        render_bento_card(f"KDI Koła ({nazwa_aktywnego_kola})", kdi_global_str, "Rekomendowane: ≤ 1.20", styl_custom=f"color: {kolor_kdi_global}; text-shadow: 0 0 16px {kolor_kdi_global};")
+        render_bento_card(f"KDI Koła ({nazwa_aktywnego_kola})", wartosc_kdi_html, "Rekomendowane: ≤ 1.20", styl_custom=f"color: {kolor_kdi_global}; text-shadow: 0 0 16px {kolor_kdi_global};")
     with c4:
         uprawnieni_count = sum(1 for d in dane_przeliczone if d["moze_glosowac"])
         lacznie_czlonkow = len(dane_przeliczone)

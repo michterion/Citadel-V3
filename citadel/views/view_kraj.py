@@ -1,10 +1,11 @@
 import pandas as pd
 import streamlit as st
+from calculations import formatuj_wartosc_kdi, oblicz_dynamiczny_prog_kdi, przelicz_finanse_wielu_kol
+from components.charts import PLOTLY_CONFIG, render_wykres_slupkowy_kdi
+from components.ui import render_bento_card
 from config import pobierz_kolor_kdi, pobierz_kolor_uprawnionych
 from database import pobierz_aktywne_kola_kraju
-from calculations import przelicz_finanse_wielu_kol
-from components.ui import render_bento_card
-from components.charts import render_wykres_slupkowy_kdi, PLOTLY_CONFIG
+
 
 def render_view_kraj(wybrany_kraj_id, mapa_krajow, mapa_regionow, dzis):
     nazwa_kraju = mapa_krajow.get(wybrany_kraj_id, "Polska")
@@ -36,32 +37,39 @@ def render_view_kraj(wybrany_kraj_id, mapa_krajow, mapa_regionow, dzis):
     statystyki_per_region = {}
     for reg_id, reg_nazwa in mapa_regionow.items():
         statystyki_per_region[reg_id] = {
-            "Region": reg_nazwa, "Liczba Kół": 0, "Członkowie": 0, "Kasa": 0, 
-            "Wpłaty": 0, "Wydatki": 0, "total_z": 0, "total_s": 0, "uprawnieni": 0
+            "Region": reg_nazwa, "Liczba Kół": 0, "Członkowie": 0, "Kasa": 0,
+            "Wpłaty": 0, "Wydatki": 0, "total_z": 0, "total_s": 0, "uprawnieni": 0,
+            "czlonkowie_lista": []
         }
 
     bez_regionu_stat = {
         "Region": "⚠️ Bez regionu (nieprzypisane)", "Liczba Kół": 0, "Członkowie": 0, "Kasa": 0,
-        "Wpłaty": 0, "Wydatki": 0, "total_z": 0, "total_s": 0, "uprawnieni": 0
+        "Wpłaty": 0, "Wydatki": 0, "total_z": 0, "total_s": 0, "uprawnieni": 0,
+        "czlonkowie_lista": []
     }
 
+    wszyscy_czlonkowie_kraj = []
     for row in wszystkie_aktywne_kola_kraju.itertuples(index=False):
         k_id = row.id
         r_id = row.region_id
         dane, wplaty_kasa, kasa, wydatki, _, z_gr, s_gr = finanse_hurt_kraj.get(k_id, ([], 0, 0, 0, 0, 0, 0))
-        
+        if dane:
+            wszyscy_czlonkowie_kraj.extend(dane)
+
         kraj_kasa_gr += kasa
         kraj_wplaty_gr += wplaty_kasa
         kraj_wydatki_gr += wydatki
         kraj_total_z_gr += z_gr
         kraj_total_s_gr += s_gr
-        
+
         czl_cnt = len(dane)
         upr_cnt = sum(1 for d in dane if d["moze_glosowac"])
         kraj_czlonkowie_count += czl_cnt
         kraj_uprawnieni_count += upr_cnt
 
         target_bucket = statystyki_per_region[r_id] if pd.notna(r_id) and r_id in statystyki_per_region else bez_regionu_stat
+        if dane:
+            target_bucket["czlonkowie_lista"].extend(dane)
         target_bucket["Liczba Kół"] += 1
         target_bucket["Członkowie"] += czl_cnt
         target_bucket["Kasa"] += kasa
@@ -74,6 +82,8 @@ def render_view_kraj(wybrany_kraj_id, mapa_krajow, mapa_regionow, dzis):
     kraj_kdi_val = round(kraj_total_z_gr / kraj_total_s_gr, 2) if kraj_total_s_gr > 0 else None
     kraj_kdi_str = f"{kraj_kdi_val:.2f}" if kraj_kdi_val is not None else "Brak danych"
     kolor_kraj_kdi = pobierz_kolor_kdi(kraj_kdi_val)
+    kraj_kdi_prog_val, kraj_kdi_prog_str = oblicz_dynamiczny_prog_kdi(wszyscy_czlonkowie_kraj)
+    wartosc_kraj_kdi_html = formatuj_wartosc_kdi(kraj_kdi_str, kraj_kdi_prog_val, kraj_kdi_prog_str)
 
     kraj_pct_upr = (kraj_uprawnieni_count / kraj_czlonkowie_count * 100.0) if kraj_czlonkowie_count > 0 else 0.0
     kolor_kraj_upr = pobierz_kolor_uprawnionych(kraj_pct_upr if kraj_czlonkowie_count > 0 else None)
@@ -85,7 +95,7 @@ def render_view_kraj(wybrany_kraj_id, mapa_krajow, mapa_regionow, dzis):
     with kc2:
         render_bento_card("Suma Składek (Kraj)", f"{(kraj_wplaty_gr / 100.0):,.2f} PLN", f"Wydatki: {(kraj_wydatki_gr / 100.0):,.2f} PLN", "accent-cyan")
     with kc3:
-        render_bento_card("Zagregowany KDI Kraju", kraj_kdi_str, "Rekomendowane: ≤ 1.20", styl_custom=f"color: {kolor_kraj_kdi}; text-shadow: 0 0 16px {kolor_kraj_kdi};")
+        render_bento_card("Zagregowany KDI Kraju", wartosc_kraj_kdi_html, "Rekomendowane: ≤ 1.20", styl_custom=f"color: {kolor_kraj_kdi}; text-shadow: 0 0 16px {kolor_kraj_kdi};")
     with kc4:
         render_bento_card("Uprawnieni do Głosu (Kraj)", f"{kraj_uprawnieni_count} / {kraj_czlonkowie_count}", f"{kraj_pct_upr:.1f}% (karencja ≤ 6 msc)", styl_custom=f"color: {kolor_kraj_upr}; text-shadow: 0 0 16px {kolor_kraj_upr};")
 
@@ -94,6 +104,7 @@ def render_view_kraj(wybrany_kraj_id, mapa_krajow, mapa_regionow, dzis):
     dane_wykres_reg = []
     for r_id, s in statystyki_per_region.items():
         r_kdi = round(s["total_z"] / s["total_s"], 2) if s["total_s"] > 0 else None
+        r_prog_val, r_prog_str = oblicz_dynamiczny_prog_kdi(s["czlonkowie_lista"])
         r_pct = (s["uprawnieni"] / s["Członkowie"] * 100.0) if s["Członkowie"] > 0 else 0.0
         tabela_zbiorcza_reg.append({
             "Region": s["Region"],
@@ -103,13 +114,15 @@ def render_view_kraj(wybrany_kraj_id, mapa_krajow, mapa_regionow, dzis):
             "Wpłaty": f"{(s['Wpłaty'] / 100.0):,.2f} zł",
             "Wydatki": f"{(s['Wydatki'] / 100.0):,.2f} zł",
             "KDI Regionu": f"{r_kdi:.2f}" if r_kdi is not None else "Brak danych",
+            "Próg KDI (głos)": r_prog_str,
             "Uprawnieni": f"{s['uprawnieni']}/{s['Członkowie']} ({r_pct:.1f}%)"
         })
         if r_kdi is not None:
             dane_wykres_reg.append({"nazwa": s["Region"], "kdi": r_kdi})
-    
+
     if bez_regionu_stat["Liczba Kół"] > 0:
         br_kdi = round(bez_regionu_stat["total_z"] / bez_regionu_stat["total_s"], 2) if bez_regionu_stat["total_s"] > 0 else None
+        br_prog_val, br_prog_str = oblicz_dynamiczny_prog_kdi(bez_regionu_stat["czlonkowie_lista"])
         br_pct = (bez_regionu_stat["uprawnieni"] / bez_regionu_stat["Członkowie"] * 100.0) if bez_regionu_stat["Członkowie"] > 0 else 0.0
         tabela_zbiorcza_reg.append({
             "Region": bez_regionu_stat["Region"],
@@ -119,6 +132,7 @@ def render_view_kraj(wybrany_kraj_id, mapa_krajow, mapa_regionow, dzis):
             "Wpłaty": f"{(bez_regionu_stat['Wpłaty'] / 100.0):,.2f} zł",
             "Wydatki": f"{(bez_regionu_stat['Wydatki'] / 100.0):,.2f} zł",
             "KDI Regionu": f"{br_kdi:.2f}" if br_kdi is not None else "Brak danych",
+            "Próg KDI (głos)": br_prog_str,
             "Uprawnieni": f"{bez_regionu_stat['uprawnieni']}/{bez_regionu_stat['Członkowie']} ({br_pct:.1f}%)"
         })
         if br_kdi is not None:
@@ -133,7 +147,21 @@ def render_view_kraj(wybrany_kraj_id, mapa_krajow, mapa_regionow, dzis):
                 if wartosc == "Brak danych":
                     return f"color: {kolor}; font-style: italic;"
                 return f"color: {kolor}; font-weight: 700;"
-            styler_reg = df_reg.style.map(stylizuj_kdi_reg, subset=["KDI Regionu"])
+
+            def stylizuj_prog(wartosc):
+                if wartosc == "pełna karencja":
+                    return "color: #4ade80; font-weight: 700;"
+                if isinstance(wartosc, str) and wartosc.startswith("≤ "):
+                    val_str = wartosc.replace("≤ ", "")
+                    kolor = pobierz_kolor_kdi(val_str)
+                    return f"color: {kolor}; font-weight: 700;"
+                return "color: #94a3b8;"
+
+            styler_reg = (
+                df_reg.style
+                .map(stylizuj_kdi_reg, subset=["KDI Regionu"])
+                .map(stylizuj_prog, subset=["Próg KDI (głos)"])
+            )
             st.dataframe(styler_reg, width="stretch", hide_index=True)
         else:
             st.dataframe(df_reg, width="stretch", hide_index=True)

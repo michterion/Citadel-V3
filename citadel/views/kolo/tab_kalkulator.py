@@ -1,9 +1,10 @@
 from datetime import date
-import streamlit as st
 
-from config import DATA_ODCIECIA, dzis_pl, pobierz_kolor_kdi
-from calculations import oblicz_symulacje_kalkulatora, pobierz_parametr
+import streamlit as st
+from calculations import formatuj_wartosc_kdi, oblicz_symulacje_kalkulatora, pobierz_parametr
 from components.ui import render_bento_card
+from config import DATA_ODCIECIA, dzis_pl, pobierz_kolor_kdi
+
 
 def render_tab_kalkulator(dzis):
     st.markdown("### 🧮 Podręczny Kalkulator Składek i Mandatów")
@@ -120,12 +121,22 @@ def render_tab_kalkulator(dzis):
     kdi_str = f"{kdi_calc:.2f}" if kdi_calc is not None else "Brak danych"
     kolor_kdi = pobierz_kolor_kdi(kdi_calc)
 
+    stawka_bezp_gr = max(stawka_biezaca_gr, 1)
+    min_wpl_sim_gr = max(0, z_i_gr - 6 * stawka_bezp_gr)
+    if min_wpl_sim_gr > 0:
+        kdi_prog_sim_val = round(z_i_gr / min_wpl_sim_gr, 2)
+        kdi_prog_sim_str = f"≤ {kdi_prog_sim_val:.2f}"
+    else:
+        kdi_prog_sim_val = None
+        kdi_prog_sim_str = "pełna karencja"
+    wartosc_sim_kdi_html = formatuj_wartosc_kdi(kdi_str, kdi_prog_sim_val, kdi_prog_sim_str)
+
     if saldo_koncowe_gr >= 0:
         moze_glosowac = True
         miesiace_dlugu = 0.0
         doplata_do_glosu_pln = 0.0
     else:
-        miesiace_dlugu = abs(saldo_koncowe_gr) / max(stawka_biezaca_gr, 1)
+        miesiace_dlugu = abs(saldo_koncowe_gr) / stawka_bezp_gr
         moze_glosowac = (miesiace_dlugu <= 6.0)
         limit_karencji_gr = 6 * stawka_biezaca_gr
         doplata_do_glosu_gr = max(0, abs(saldo_koncowe_gr) - limit_karencji_gr)
@@ -150,7 +161,7 @@ def render_tab_kalkulator(dzis):
             kolor_salda = "accent-green" if saldo_koncowe_pln >= 0 else "accent-rose"
             render_bento_card("Saldo Końcowe", f"{saldo_koncowe_pln:,.2f} PLN", f"Start: {calc_saldo_start_pln:.2f} zł | Wpłaty: {calc_wplaty_pln:.2f} zł", kolor_salda)
         with cb2:
-            render_bento_card("Wskaźnik KDI", kdi_str, "Cel statutowy: ≤ 1.20", styl_custom=f"color: {kolor_kdi}; text-shadow: 0 0 16px {kolor_kdi};")
+            render_bento_card("Wskaźnik KDI", wartosc_sim_kdi_html, "Cel statutowy: ≤ 1.20", styl_custom=f"color: {kolor_kdi}; text-shadow: 0 0 16px {kolor_kdi};")
 
         cb3, cb4 = st.columns(2)
         with cb3:
@@ -188,7 +199,7 @@ def render_tab_kalkulator(dzis):
             sym_nowe_saldo = saldo_koncowe_pln + sym_doplata
             sym_nowe_msc_dlugu = abs(sym_nowe_saldo) / stawka_biezaca_pln if sym_nowe_saldo < 0 else 0.0
             sym_glos = (sym_nowe_saldo >= 0) or (sym_nowe_msc_dlugu <= 6.0)
-            
+
             st.write(f"• Nowe saldo po dopłacie: **{sym_nowe_saldo:+.2f} zł**")
             st.write(f"• Nowe zadłużenie: **{sym_nowe_msc_dlugu:.1f} miesięcy**")
             st.write(f"• Status głosu: **{'✅ UPRAWNIONY' if sym_glos else '❌ NADAL BEZ PRAWA GŁOSU'}**")

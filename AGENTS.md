@@ -41,6 +41,12 @@ Ten plik stanowi trwałą pamięć projektu dla asystentów AI (Antigravity). Za
    * Stała `DATA_ODCIECIA = date(2026, 10, 1)` definiuje początek naliczania składek w bieżącym okresie rozliczeniowym.
 4. **Strefa Czasowa**:
    * Zawsze używamy czasu warszawskiego (`WARSAW_TZ = tz.gettz("Europe/Warsaw")`, funkcje `dzis_pl()`, `teraz_utc()`, `formatuj_czas_pl()`).
+5. **Dynamiczny Próg KDI a Benchmark 1.20**:
+   * Statutowy benchmark `Rekomendowane: ≤ 1.20` odpowiada dokładnie 3-letniemu stażowi członka przy 6 miesiącach karencji statutowej ($36S / 30S = 1.20$). Pozostaje on trwałym benchmarkiem porównawczym w napisach i kodzie.
+   * Rzeczywisty, dynamiczny próg KDI do zachowania praw głosu zależy od stażu i struktury wiekowej koła/regionu/kraju:
+     $KDI_{\text{próg}} = \frac{\sum z_i}{\sum \max(0, z_i - 6 \times S_i)}$.
+   * Dla osób o stażu $\le 6$ msc próg wynosi `pełna karencja` (brak konieczności jakichkolwiek wpłat do prawa głosu).
+   * Wartość progu jest renderowana dynamicznie w kafelkach Bento obok bieżącego KDI mniejszą czcionką z poświatą tekstu (`text-shadow`) i kolorem ze skali KDI (`formatuj_wartosc_kdi`), zachowując niezmieniony benchmark w podtytule (`Rekomendowane: ≤ 1.20`).
 
 ---
 

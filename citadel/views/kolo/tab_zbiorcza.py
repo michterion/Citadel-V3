@@ -1,8 +1,9 @@
 import pandas as pd
 import streamlit as st
-from config import pobierz_kolor_kdi
 from celestia import pobierz_kolor_celestia
 from components.charts import czy_jasny_motyw
+from config import pobierz_kolor_kdi
+
 
 def render_tab_zbiorcza(dane_przeliczone, nazwa_aktywnego_kola):
     if not dane_przeliczone:
@@ -22,6 +23,7 @@ def render_tab_zbiorcza(dane_przeliczone, nazwa_aktywnego_kola):
             "Wpłacone": f"{(d['wplaty_gr'] / 100.0):.2f} zł",
             "Saldo Aktualne": f"{d['saldo_akt_pln']:.2f} zł",
             "Wskaźnik KDI": d["kdi_str"],
+            "Próg KDI (głos)": d.get("kdi_prog_str", "—"),
             "Celestia": d.get("celestia_rating", "—"),
             "Możliwość głosowania": d["glosowanie_str"]
         }
@@ -33,6 +35,15 @@ def render_tab_zbiorcza(dane_przeliczone, nazwa_aktywnego_kola):
         if wartosc == "Brak danych":
             return f"color: {kolor}; font-style: italic;"
         return f"color: {kolor}; font-weight: 700;"
+
+    def stylizuj_kdi_prog(wartosc):
+        if wartosc == "pełna karencja":
+            return "color: #4ade80; font-weight: 700;"
+        if isinstance(wartosc, str) and wartosc.startswith("≤ "):
+            val_str = wartosc.replace("≤ ", "")
+            kolor = pobierz_kolor_kdi(val_str)
+            return f"color: {kolor}; font-weight: 700;"
+        return "color: #94a3b8;"
 
     def stylizuj_celestia_komorke(wartosc):
         kolor = pobierz_kolor_celestia(wartosc, is_light)
@@ -48,6 +59,7 @@ def render_tab_zbiorcza(dane_przeliczone, nazwa_aktywnego_kola):
     styler = (
         df_wyswietl.style
         .map(stylizuj_kdi_komorke, subset=["Wskaźnik KDI"])
+        .map(stylizuj_kdi_prog, subset=["Próg KDI (głos)"])
         .map(stylizuj_celestia_komorke, subset=["Celestia"])
         .map(stylizuj_glosowanie, subset=["Możliwość głosowania"])
     )

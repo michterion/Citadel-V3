@@ -22,6 +22,7 @@ def render_tab_profile(dane_przeliczone, dzis):
     osoba = next(item for item in dane_przeliczone if item["id"] == wybrany_id)
 
     kolor_kdi_osoby = pobierz_kolor_kdi(osoba["kdi_val"])
+    kolor_prog_osoby = pobierz_kolor_kdi(osoba.get("kdi_prog_val")) if osoba.get("kdi_prog_val") is not None else "#10b981"
     kolor_glos = "#10b981" if osoba["moze_glosowac"] else "#f43f5e"
     kolor_celestia = pobierz_kolor_celestia(osoba.get("celestia_rating", "DDD"), is_light)
 
@@ -29,7 +30,7 @@ def render_tab_profile(dane_przeliczone, dzis):
         <div class="profile-banner-card">
             <div><span style="color: #94a3b8; font-size: 0.85rem;">CZŁONEK:</span> <strong style="font-size: 1rem;">{osoba['imie_nazwisko']}</strong></div>
             <div><span style="color: #94a3b8; font-size: 0.85rem;">CELESTIA:</span> <strong style="color: {kolor_celestia}; font-size: 1.15rem; text-shadow: 0 0 10px {kolor_celestia};">{osoba.get('celestia_rating', '—')} ({osoba.get('celestia_score', 0)} pkt)</strong></div>
-            <div><span style="color: #94a3b8; font-size: 0.85rem;">AKTUALNY KDI:</span> <strong style="color: {kolor_kdi_osoby}; font-size: 1.15rem; text-shadow: 0 0 10px {kolor_kdi_osoby};">{osoba['kdi_str']}</strong></div>
+            <div><span style="color: #94a3b8; font-size: 0.85rem;">AKTUALNY KDI:</span> <strong style="color: {kolor_kdi_osoby}; font-size: 1.15rem; text-shadow: 0 0 10px {kolor_kdi_osoby};">{osoba['kdi_str']}</strong> <span style="font-size: 0.82rem; font-weight: 600; color: {kolor_prog_osoby}; text-shadow: 0 0 8px {kolor_prog_osoby}; margin-left: 4px;">(próg głosu: {osoba.get('kdi_prog_str', '—')})</span></div>
             <div><span style="color: #94a3b8; font-size: 0.85rem;">SALDO:</span> <strong style="color: {'#22c55e' if osoba['saldo_akt_pln'] >= 0 else '#f43f5e'}; font-size: 1rem;">{osoba['saldo_akt_pln']:.2f} zł</strong></div>
             <div><span style="color: #94a3b8; font-size: 0.85rem;">GŁOSOWANIE:</span> <strong style="color: {kolor_glos}; font-size: 1.05rem; font-weight: 800;">{osoba['glosowanie_str']}</strong></div>
         </div>
@@ -175,7 +176,7 @@ def render_tab_profile(dane_przeliczone, dzis):
         kdi_score = filary.get('kdi_score', 0)
         kolor_kdi = pobierz_kolor_celestia(kdi_score, is_light)
         styl_kdi = f"color: {kolor_kdi}; text-shadow: 0 0 14px {kolor_kdi};"
-        render_bento_card("Wskaźnik KDI (10%)", f"{kdi_score} pkt", f"KDI: {osoba['kdi_str']}", styl_custom=styl_kdi)
+        render_bento_card("Wskaźnik KDI (10%)", f"{kdi_score} pkt", f"KDI: {osoba['kdi_str']} (próg: {osoba.get('kdi_prog_str', '—')})", styl_custom=styl_kdi)
     with cf3:
         saldo_score = filary.get('saldo_score', 0)
         kolor_saldo = pobierz_kolor_celestia(saldo_score, is_light)

@@ -1,10 +1,10 @@
 import calendar
 from datetime import date, datetime
-from dateutil.relativedelta import relativedelta
-import pandas as pd
+
 import streamlit as st
-from config import DATA_ODCIECIA, dzis_pl, parse_date
+from config import DATA_ODCIECIA, dzis_pl, parse_date, pobierz_kolor_kdi
 from database import db_query
+from dateutil.relativedelta import relativedelta
 
 GRANICA_STAREJ_UCHWALY = date(2025, 1, 1)
 
@@ -16,7 +16,7 @@ def waliduj_daty_czlonka(ur, wst):
         return False, "Data przystąpienia nie może być z przyszłości!"
     if wst < ur:
         return False, "Data przystąpienia nie może być wcześniejsza niż data urodzenia!"
-    
+
     wiek_wstapienia = wst.year - ur.year - ((wst.month, wst.day) < (ur.month, ur.day))
     if wiek_wstapienia < 13:
         return False, f"Członek w momencie przystąpienia musi mieć ukończone co najmniej 13 lat (obliczono: {wiek_wstapienia} lat)!"
@@ -108,26 +108,26 @@ def oblicz_naliczenia_gr(data_wstapienia_val, data_urodzenia_val, reczny_paramet
     suma_gr = 0
     licznik = 0
     kursor = date(poczatek.year, poczatek.month, 1)
-    
+
     while kursor <= punkt:
         _, last_day = calendar.monthrange(kursor.year, kursor.month)
         ostatni_dzien_msc = date(kursor.year, kursor.month, last_day)
-        
+
         if ostatni_dzien_msc <= punkt:
             kod, stawka_gr = pobierz_stawke_za_miesiac(wstapienie, urodziny, reczny_parametr, kursor)
             if kod != "ZWOLNIONY_WSTAPIENIE":
                 suma_gr += stawka_gr
                 licznik += 1
-            
+
         kursor += relativedelta(months=1)
 
     return suma_gr, licznik
 
 def oblicz_symulacje_kalkulatora(
-    data_wstapienia_val, 
-    data_urodzenia_val, 
-    reczny_parametr, 
-    punkt_odniesienia_val, 
+    data_wstapienia_val,
+    data_urodzenia_val,
+    reczny_parametr,
+    punkt_odniesienia_val,
     data_startu_naliczania_val,
     uwzglednij_biezacy_miesiac=False,
     skladka_funkcyjna_gr=0,
@@ -152,18 +152,18 @@ def oblicz_symulacje_kalkulatora(
     while kursor <= punkt:
         _, last_day = calendar.monthrange(kursor.year, kursor.month)
         ostatni_dzien_msc = date(kursor.year, kursor.month, last_day)
-        
+
         czy_naliczyc = (ostatni_dzien_msc <= punkt) or (
             uwzglednij_biezacy_miesiac and (kursor.year == punkt.year and kursor.month == punkt.month)
         )
-        
+
         if czy_naliczyc:
             kod_progu, stawka_gr = pobierz_stawke_za_miesiac(wstapienie, data_urodzenia_val, reczny_parametr, kursor)
             if kod_progu != "ZWOLNIONY_WSTAPIENIE":
                 suma_podstawowa_gr += stawka_gr
                 licznik_miesiecy += 1
                 historia_progow[kod_progu] = historia_progow.get(kod_progu, 0) + 1
-            
+
         kursor += relativedelta(months=1)
 
     suma_funkcyjna_gr = int(miesiace_funkcyjne) * int(skladka_funkcyjna_gr)
@@ -284,11 +284,20 @@ def _przelicz_finanse_wielu_kol_cached(kolo_ids_tuple, punkt_odniesienia):
             kdi_val = round(z_i_gr / s_i_gr, 2) if s_i_gr > 0 else None
             kdi_str = f"{kdi_val:.2f}" if kdi_val is not None else "Brak danych"
 
+            stawka_bezp_gr = max(stawka_biezaca_gr, 1)
+            min_wpl_osoby_gr = max(0, z_i_gr - 6 * stawka_bezp_gr)
+            if min_wpl_osoby_gr > 0:
+                kdi_prog_osoby_val = round(z_i_gr / min_wpl_osoby_gr, 2)
+                kdi_prog_osoby_str = f"≤ {kdi_prog_osoby_val:.2f}"
+            else:
+                kdi_prog_osoby_val = None
+                kdi_prog_osoby_str = "pełna karencja"
+
             if sal_akt_gr >= 0:
                 moze_glosowac = True
                 glosowanie_str = "TAK"
             else:
-                miesiace_zadluzenia = abs(sal_akt_gr) / max(stawka_biezaca_gr, 1)
+                miesiace_zadluzenia = abs(sal_akt_gr) / stawka_bezp_gr
                 moze_glosowac = (miesiace_zadluzenia <= 6.0)
                 glosowanie_str = "TAK" if moze_glosowac else "NIE"
 
@@ -299,6 +308,7 @@ def _przelicz_finanse_wielu_kol_cached(kolo_ids_tuple, punkt_odniesienia):
                 "data_wst": row.data_przystapienia,
                 "parametr": param_kod,
                 "reczny_parametr": row.reczny_parametr,
+                "stawka_biezaca_gr": stawka_biezaca_gr,
                 "saldo_start_gr": s_start_gr,
                 "naliczone_gr": nal_tot_gr,
                 "naliczone_auto_gr": nal_auto_gr,
@@ -309,8 +319,12 @@ def _przelicz_finanse_wielu_kol_cached(kolo_ids_tuple, punkt_odniesienia):
                 "korekty_gr": kor_gr,
                 "saldo_akt_gr": sal_akt_gr,
                 "saldo_akt_pln": sal_akt_gr / 100.0,
+                "z_i_gr": z_i_gr,
+                "s_i_gr": s_i_gr,
                 "kdi_val": kdi_val,
                 "kdi_str": kdi_str,
+                "kdi_prog_val": kdi_prog_osoby_val,
+                "kdi_prog_str": kdi_prog_osoby_str,
                 "moze_glosowac": moze_glosowac,
                 "glosowanie_str": glosowanie_str
             })
@@ -318,6 +332,51 @@ def _przelicz_finanse_wielu_kol_cached(kolo_ids_tuple, punkt_odniesienia):
         wyniki[kid] = (dane_kolo, w_kasa, f_kasa, wyd_kasa, kor_kasa, tot_z_gr, tot_s_gr)
 
     return wyniki
+
+def oblicz_dynamiczny_prog_kdi(czlonkowie_lista: list) -> tuple[float | None, str]:
+    """
+    Oblicza dynamiczny próg KDI wymagany do zachowania praw głosu dla grupy członków (koła, regionu, kraju).
+    Formuła:
+      KDI_próg = Suma(zapotrzebowanie) / Suma(max(0, zapotrzebowanie - 6 * stawka_bieżąca))
+    Jeśli wszyscy członkowie mają staż <= 6 miesięcy (pełna karencja), próg wynosi (None, 'pełna karencja').
+    """
+    if not czlonkowie_lista:
+        return None, "Brak danych"
+
+    tot_z_gr = sum(d.get("z_i_gr", 0) for d in czlonkowie_lista)
+    tot_s_min_gr = sum(max(0, d.get("z_i_gr", 0) - 6 * max(d.get("stawka_biezaca_gr", 0), 1)) for d in czlonkowie_lista)
+
+    if tot_s_min_gr <= 0:
+        return None, "pełna karencja"
+
+    val = round(tot_z_gr / tot_s_min_gr, 2)
+    return val, f"≤ {val:.2f}"
+
+oblicz_dynamiczny_prog_kdi_kola = oblicz_dynamiczny_prog_kdi
+
+def formatuj_wartosc_kdi(kdi_str: str, kdi_prog_val: float | None, kdi_prog_str: str = "") -> str:
+    """
+    Formatuje wartość KDI wraz z dynamicznym progiem do wyświetlenia w Bento Card lub nagłówku.
+    Zachowuje kompatybilność z benchmarkiem statutowym (1.20 w podtytule).
+    """
+    if kdi_prog_val is not None:
+        kolor_prog = pobierz_kolor_kdi(kdi_prog_val)
+        etykieta = kdi_prog_str if (kdi_prog_str and kdi_prog_str.startswith("≤")) else f"≤ {kdi_prog_val:.2f}"
+        return (
+            f'{kdi_str} '
+            f'<span style="font-size: 0.92rem; font-weight: 600; color: {kolor_prog}; '
+            f'text-shadow: 0 0 10px {kolor_prog}; margin-left: 6px; vertical-align: middle;">'
+            f'(próg: {etykieta})</span>'
+        )
+    elif kdi_prog_str == "pełna karencja":
+        kolor_prog = "#4ade80"
+        return (
+            f'{kdi_str} '
+            f'<span style="font-size: 0.90rem; font-weight: 600; color: {kolor_prog}; '
+            f'text-shadow: 0 0 10px {kolor_prog}; margin-left: 6px; vertical-align: middle;">'
+            f'(próg: pełna karencja)</span>'
+        )
+    return kdi_str
 
 def przelicz_finanse_wielu_kol(kolo_ids_input, punkt_odniesienia):
     if not kolo_ids_input:
