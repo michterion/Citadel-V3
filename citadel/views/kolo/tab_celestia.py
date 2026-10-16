@@ -58,27 +58,30 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
             )
         with col_c2:
             pct_prime = (liczba_prime / total_czlonkow * 100) if total_czlonkow > 0 else 0
+            kolor_prime = "#16a34a" if is_light else "#22c55e"
             render_bento_card(
                 "Klasa Prime (AAA — A)",
                 f"{liczba_prime} / {total_czlonkow}",
                 f"{pct_prime:.1f}% członków wzorowych",
-                "accent-green"
+                styl_custom=f"color: {kolor_prime}; text-shadow: 0 0 14px {kolor_prime};"
             )
         with col_c3:
             pct_med = (liczba_medium / total_czlonkow * 100) if total_czlonkow > 0 else 0
+            kolor_med = "#0284c7" if is_light else "#38bdf8"
             render_bento_card(
                 "Klasa Średnia (BBB — B)",
                 f"{liczba_medium} / {total_czlonkow}",
                 f"{pct_med:.1f}% stabilnych / umiarkowanych",
-                "accent-cyan"
+                styl_custom=f"color: {kolor_med}; text-shadow: 0 0 14px {kolor_med};"
             )
         with col_c4:
             pct_risk = (liczba_risk / total_czlonkow * 100) if total_czlonkow > 0 else 0
+            kolor_risk = "#dc2626" if is_light else "#ef4444"
             render_bento_card(
                 "Zagrożeni (CCC — DDD)",
                 f"{liczba_risk} / {total_czlonkow}",
                 f"{pct_risk:.1f}% ryzyko utraty praw głosu",
-                "accent-rose"
+                styl_custom=f"color: {kolor_risk}; text-shadow: 0 0 14px {kolor_risk};"
             )
 
         st.markdown("#### 📊 Rozkład Poziomów Ratingowych w Kole")
@@ -159,6 +162,22 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
             kolor = pobierz_kolor_celestia(wartosc, is_light)
             return f"color: {kolor}; font-weight: 800; font-size: 1.05rem;"
 
+        def stylizuj_score_ranking(wartosc):
+            try:
+                score_num = int(str(wartosc).replace(" pkt", "").strip())
+                kolor = pobierz_kolor_celestia(score_num, is_light)
+                return f"color: {kolor}; font-weight: 800;"
+            except Exception:
+                return ""
+
+        def stylizuj_vdc_ranking(wartosc):
+            try:
+                vdc_num = int(str(wartosc).replace(" pkt", "").strip())
+                kolor = pobierz_kolor_celestia(vdc_num, is_light)
+                return f"color: {kolor}; font-weight: 800;"
+            except Exception:
+                return "color: #94a3b8;"
+
         def stylizuj_glos_ranking(wartosc):
             if wartosc == "TAK":
                 return "color: #22c55e; font-weight: 800;"
@@ -166,10 +185,12 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
                 return "color: #f43f5e; font-weight: 800;"
             return ""
 
-        styler_rank = df_rank.style.map(
-            stylizuj_celestia_ranking, subset=["Rating Celestia"]
-        ).map(
-            stylizuj_glos_ranking, subset=["Uprawnienie do głosu"]
+        styler_rank = (
+            df_rank.style
+            .map(stylizuj_celestia_ranking, subset=["Rating Celestia"])
+            .map(stylizuj_score_ranking, subset=["Score (0-1000)"])
+            .map(stylizuj_vdc_ranking, subset=["Dyscyplina Głosowań (VDC)"])
+            .map(stylizuj_glos_ranking, subset=["Uprawnienie do głosu"])
         )
 
         st.dataframe(styler_rank, width="stretch", hide_index=True)

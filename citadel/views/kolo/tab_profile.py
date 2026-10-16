@@ -149,10 +149,14 @@ def render_tab_profile(dane_przeliczone, dzis):
     # SEKCJA CELESTIA — AUDYT DYSCYPLINY W DNIACH GŁOSOWAŃ
     st.markdown("---")
     st.markdown("### ⭐ Celestia — Audyt Wiarygodności i Dni Głosowań")
-    st.caption(
-        f"Klasa wiarygodności: **{osoba.get('celestia_nazwa', 'Brak')}** | "
-        f"Score: **{osoba.get('celestia_score', 0)} / 1000 pkt** | "
-        f"{osoba.get('celestia_opis', '—')}"
+
+    score_osoby = osoba.get('celestia_score', 0)
+    kolor_score = pobierz_kolor_celestia(score_osoby, is_light)
+    st.markdown(
+        f"Klasa wiarygodności: <strong style='color: {kolor_score}; font-size: 1.1rem; text-shadow: 0 0 10px {kolor_score};'>{osoba.get('celestia_nazwa', 'Brak')} ({osoba.get('celestia_rating', '—')})</strong> | "
+        f"Score: <strong style='color: {kolor_score}; font-size: 1.1rem; text-shadow: 0 0 10px {kolor_score};'>{score_osoby} / 1000 pkt</strong> | "
+        f"{osoba.get('celestia_opis', '—')}",
+        unsafe_allow_html=True
     )
 
     filary = osoba.get("celestia_filary", {})
@@ -161,13 +165,27 @@ def render_tab_profile(dane_przeliczone, dzis):
         vdc_val = filary.get("vdc_score")
         vdc_text = f"{vdc_val} pkt" if vdc_val is not None else "Brak zebrań"
         sub_text = f"W oparciu o {filary.get('liczba_glosowan', 0)} głosowań" if vdc_val is not None else "Brak zarejestrowanych zebrań"
-        render_bento_card("Dyscyplina Głosowań (65%)", vdc_text, sub_text, "accent-cyan")
+        if vdc_val is not None:
+            kolor_vdc = pobierz_kolor_celestia(vdc_val, is_light)
+            styl_vdc = f"color: {kolor_vdc}; text-shadow: 0 0 14px {kolor_vdc};"
+        else:
+            styl_vdc = "color: #94a3b8;"
+        render_bento_card("Dyscyplina Głosowań (65%)", vdc_text, sub_text, styl_custom=styl_vdc)
     with cf2:
-        render_bento_card("Wskaźnik KDI (10%)", f"{filary.get('kdi_score', 0)} pkt", f"KDI: {osoba['kdi_str']}", "accent-green")
+        kdi_score = filary.get('kdi_score', 0)
+        kolor_kdi = pobierz_kolor_celestia(kdi_score, is_light)
+        styl_kdi = f"color: {kolor_kdi}; text-shadow: 0 0 14px {kolor_kdi};"
+        render_bento_card("Wskaźnik KDI (10%)", f"{kdi_score} pkt", f"KDI: {osoba['kdi_str']}", styl_custom=styl_kdi)
     with cf3:
-        render_bento_card("Bieżące Saldo (20%)", f"{filary.get('saldo_score', 0)} pkt", f"Saldo: {osoba['saldo_akt_pln']:.2f} zł", "accent-purple")
+        saldo_score = filary.get('saldo_score', 0)
+        kolor_saldo = pobierz_kolor_celestia(saldo_score, is_light)
+        styl_saldo = f"color: {kolor_saldo}; text-shadow: 0 0 14px {kolor_saldo};"
+        render_bento_card("Bieżące Saldo (20%)", f"{saldo_score} pkt", f"Saldo: {osoba['saldo_akt_pln']:.2f} zł", styl_custom=styl_saldo)
     with cf4:
-        render_bento_card("Rytm Płatności (5%)", f"{filary.get('rytm_score', 0)} pkt", f"Liczba wpłat: {len(hist_wplaty)}", "accent-rose")
+        rytm_score = filary.get('rytm_score', 0)
+        kolor_rytm = pobierz_kolor_celestia(rytm_score, is_light)
+        styl_rytm = f"color: {kolor_rytm}; text-shadow: 0 0 14px {kolor_rytm};"
+        render_bento_card("Rytm Płatności (5%)", f"{rytm_score} pkt", f"Liczba wpłat: {len(hist_wplaty)}", styl_custom=styl_rytm)
 
     audyt_glosowan = osoba.get("celestia_audyt_glosowan", [])
     if audyt_glosowan:
@@ -186,7 +204,17 @@ def render_tab_profile(dane_przeliczone, dzis):
             }
             for a in audyt_glosowan
         ])
-        st.dataframe(df_audyt, width="stretch", hide_index=True)
+
+        def stylizuj_ocena_glosowania(val):
+            try:
+                pkt_num = int(str(val).replace(" pkt", "").strip())
+                kolor = pobierz_kolor_celestia(pkt_num * 10, is_light)
+                return f"color: {kolor}; font-weight: 800;"
+            except Exception:
+                return ""
+
+        styler_audyt = df_audyt.style.map(stylizuj_ocena_glosowania, subset=["Ocena (0-100)"])
+        st.dataframe(styler_audyt, width="stretch", hide_index=True)
     else:
         st.info("Brak zarejestrowanych terminów głosowań przypadających w trakcie członkostwa tej osoby.")
 

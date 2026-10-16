@@ -10,13 +10,16 @@ from config import WARSAW_TZ, teraz_utc
 from rbac import generuj_sol, hashuj_haslo
 
 def get_db_conninfo():
-    if "DATABASE_URL" in st.secrets:
-        return st.secrets["DATABASE_URL"]
-    elif "postgres" in st.secrets:
-        cfg = st.secrets["postgres"]
-        ssl = f" sslmode={cfg.get('sslmode', 'require')}" if "sslmode" in cfg or "neon.tech" in str(cfg.get('host', '')) else ""
-        return f"host={cfg['host']} port={cfg.get('port', 5432)} dbname={cfg['dbname']} user={cfg['user']} password='{cfg['password']}'" + ssl
-    elif "DATABASE_URL" in os.environ:
+    try:
+        if "DATABASE_URL" in st.secrets:
+            return st.secrets["DATABASE_URL"]
+        elif "postgres" in st.secrets:
+            cfg = st.secrets["postgres"]
+            ssl = f" sslmode={cfg.get('sslmode', 'require')}" if "sslmode" in cfg or "neon.tech" in str(cfg.get('host', '')) else ""
+            return f"host={cfg['host']} port={cfg.get('port', 5432)} dbname={cfg['dbname']} user={cfg['user']} password='{cfg['password']}'" + ssl
+    except Exception:
+        pass
+    if "DATABASE_URL" in os.environ:
         return os.environ["DATABASE_URL"]
     return None
 
@@ -24,9 +27,15 @@ def get_db_conninfo():
 def get_db_pool():
     conninfo = get_db_conninfo()
     if not conninfo:
-        st.error("⚠️ Brak konfiguracji bazy danych w secrets.toml lub zmiennej DATABASE_URL.")
-        st.stop()
-    return ConnectionPool(conninfo=conninfo, min_size=1, max_size=5, open=True)
+        try:
+            st.error("⚠️ Brak konfiguracji bazy danych w secrets.toml lub zmiennej DATABASE_URL.")
+            st.stop()
+        except Exception:
+            return None
+    try:
+        return ConnectionPool(conninfo=conninfo, min_size=1, max_size=5, open=True)
+    except Exception:
+        return None
 
 pool = get_db_pool()
 
