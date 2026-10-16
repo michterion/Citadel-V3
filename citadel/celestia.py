@@ -184,21 +184,25 @@ def oblicz_rating_celestia_dla_czlonka(
     if terminy_glosowan_df is not None and not terminy_glosowan_df.empty:
         for _, row_g in terminy_glosowan_df.iterrows():
             d_glos = parse_date(row_g["data_glosowania"])
-            if d_glos >= data_wst and d_glos <= dzis:
-                # Dynamiczny termin otwarcia zbiórki
-                if pd.notna(row_g.get("data_zbiorki_od")):
-                    d_od = parse_date(row_g["data_zbiorki_od"])
-                else:
-                    dni_przed = int(_num(row_g.get("dni_zbiorki_przed"), 14))
-                    d_od = d_glos - timedelta(days=dni_przed)
 
-                # Dynamiczny ostateczny termin wymagalności
-                if pd.notna(row_g.get("data_wymagalnosci_do")):
-                    d_do = parse_date(row_g["data_wymagalnosci_do"])
-                else:
-                    dni_po = int(_num(row_g.get("dni_wymagalnosci_po"), 0))
-                    d_do = d_glos + timedelta(days=dni_po)
+            # Dynamiczny termin otwarcia zbiórki
+            if pd.notna(row_g.get("data_zbiorki_od")):
+                d_od = parse_date(row_g["data_zbiorki_od"])
+            else:
+                dni_przed = int(_num(row_g.get("dni_zbiorki_przed"), 14))
+                d_od = d_glos - timedelta(days=dni_przed)
 
+            # Dynamiczny ostateczny termin wymagalności
+            if pd.notna(row_g.get("data_wymagalnosci_do")):
+                d_do = parse_date(row_g["data_wymagalnosci_do"])
+            else:
+                dni_po = int(_num(row_g.get("dni_wymagalnosci_po"), 0))
+                d_do = d_glos + timedelta(days=dni_po)
+
+            # Uwzględniamy głosowania:
+            # 1. Członek wstąpił przed lub w dniu zebrania (d_glos >= data_wst)
+            # 2. Zebranie już się odbyło LUB okno zbiórki jest już otwarte (d_od <= dzis) LUB zebranie odbędzie się w ciągu 30 dni
+            if d_glos >= data_wst and (d_glos <= dzis or d_od <= dzis or d_glos <= dzis + timedelta(days=30)):
                 glosowania_w_stazu.append({
                     "id": row_g.get("id"),
                     "data": d_glos,
@@ -261,7 +265,10 @@ def oblicz_rating_celestia_dla_czlonka(
                         status_zdarzenia = "🔴 Spłata ratunkowa po terminie — brak prawa głosu w dniu zebrania"
                     else:
                         pkt_zdarzenia = 0
-                        status_zdarzenia = f"🔴 Utrata prawa głosu (> 6 msc długu: {miesiace_dlugu:.1f} msc)"
+                        if dzis <= termin_wymagalnosci:
+                            status_zdarzenia = f"🔴 Brak prawa głosu na zebraniu (> 6 msc długu: {miesiace_dlugu:.1f} msc)"
+                        else:
+                            status_zdarzenia = f"🔴 Utrata prawa głosu (> 6 msc długu: {miesiace_dlugu:.1f} msc)"
                 elif miesiace_dlugu > 2.0:
                     # Na krawędzi karencji (2 - 6 msc — zachowane prawo głosu na zebraniu)
                     if pokryto_po_poslizgu:

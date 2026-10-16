@@ -18,6 +18,7 @@ Aplikacja integruje mechanizmy księgowości składek ze statutowym prawem głos
   * W praktyce organizacyjnej składki stają się wymagalne w perspektywie zebrań i głosowań.
   * **Elastyczne okno zbiórki**: Każde koło konfiguruje własną długość zbiórki (`dni_zbiorki_przed`: np. 5–7 dni w małych kołach, 14–30 dni w dużych) oraz dopuszczalny poślizg (`dni_wymagalnosci_po`).
   * **Wykładnicze zanikanie w czasie (*time-decay*)**: Ostatnie głosowania ważą najwięcej w ratingu (`exp(-0.0018 * dni)`).
+  * **Ewaluacja zebrań w trakcie zbiórki i nadchodzących**: Celestia włącza do oceny zarówno zebrania historyczne, jak i zebrania z aktywnie otwartym oknem zbiórki (`d_od <= dzis`) oraz nadchodzące w ciągu 30 dni — dzięki temu przed zebraniem członkowie i skarbnik widzą swój realny status i uprawnienie do głosu.
 * **Wagi Filarów i Odporność na Nadużycia**:
   * Główną wagę stanowią **Wpłaty w Oknie przed Głosowaniami (65%)**, uzupełniane przez **Bieżące Saldo (20%)**, **KDI (10%)** oraz **Rytm Płatności (5%)**.
   * Drobna, symboliczna wpłata po terminie nie zawyża ratingu dłużnika — okno poślizgu (3 dni) podnosi ocenę tylko wtedy, gdy wpłacona kwota faktycznie likwiduje powstałe zadłużenie.

@@ -64,7 +64,10 @@ Ten plik stanowi trwałą pamięć projektu dla asystentów AI (Antigravity). Za
      * `data_zbiorki_od` oraz `data_wymagalnosci_do`
      * `dni_zbiorki_przed` (1–90 dni, np. 5–7 dni w małych kołach, 14–30 dni w dużych)
      * `dni_wymagalnosci_po` (dopuszczalny poślizg 0–30 dni)
-   * **Waga czasowa (*time-decay*)**: `waga_czasu = exp(-0.0018 * dni_od_glosowania)` faworyzuje najświeższe zachowania płatnicze.
+   * **Uwzględnianie zebrań w oknie zbiórki i nadchodzących**:
+     * Zebrania są włączane do ratingu Celestia nie tylko wstecz, ale również gdy okno zbiórki jest już otwarte (`d_od <= dzis`) lub gdy termin zebrania przypada w horyzoncie 30 dni (`d_glos <= dzis + 30 dni`).
+     * Pozwala to skarbnikowi i członkom na bieżąco monitorować prawa głosu i wywiązywanie się ze składek przed samym zebraniem (do terminu zebrania w danym miesiącu nie nalicza się nowa składka).
+   * **Waga czasowa (*time-decay*)**: `waga_czasu = exp(-0.0018 * dni_od_glosowania)` faworyzuje najświeższe zachowania płatnicze (dla bieżących i nadchodzących zebrań `dni_od_glos = 0`, waga = 1.0).
 3. **Wagi Filarów Scoringowych**:
    * **Głosowania i Zapadalność (VDC)**: **65%** — kluczowy wyznacznik wiarygodności.
    * **Bieżące Saldo i Karencja**: **20%** — stały bezpiecznik stanu konta.
