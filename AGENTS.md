@@ -73,12 +73,15 @@ Ten plik stanowi trwałą pamięć projektu dla asystentów AI (Antigravity). Za
    * **Bieżące Saldo i Karencja**: **20%** — stały bezpiecznik stanu konta.
    * **Wskaźnik Pokrycia KDI**: **10%** — bilans wpłat do naliczeń.
    * **Rytm i Regularność Wpłat**: **5%** — ciągłość i rytmika transakcji.
-4. **Zabezpieczenie przed Symboliczną Wpłatą i Rozdział Prawa Głosu w Poślizgu**:
+4. **Zabezpieczenie przed Symboliczną Wpłatą i Progresywna Skala Zapadalności**:
    * Okienko poślizgu (do 3 dni po terminie) jest uznawane **wyłącznie wtedy, gdy wpłata faktycznie pokrywa całe zadłużenie** (`saldo_na_wym_gr + wplaty_poslizg_gr >= 0`).
-   * **Rozdział wg prawa głosu**:
-     * Osoba z długiem 2–6 msc (która **miała prawo głosu na zebraniu**) po pełnej spłacie w poślizgu otrzymuje **60 pkt**.
-     * Osoba z długiem > 6 msc (która **nie miała prawa głosu na zebraniu**) po spłacie ratunkowej w poślizgu otrzymuje zaledwie **20 pkt** (nie ma mowy o nagradzaniu 60 pkt kogoś, kto był dłużnikiem bez prawa głosu).
-     * Dług powyżej 6 miesięcy bez pełnej spłaty skutkuje bezwzględnie oceną **0 pkt**.
+   * **Progresywna skala VDC zależna od czasu trwania długu**:
+     * `dług <= 2 msc`: **80 pkt** (brak) / **90 pkt** (poślizg) — pełne prawo głosu.
+     * `2–6 msc`: **40 pkt** (brak) / **65 pkt** (poślizg) — zachowane prawo głosu (karencja statutowa).
+     * `6–8 msc`: **25 pkt** (brak) / **45 pkt** (poślizg) — świeże przekroczenie karencji o 1–2 msc (brak prawa głosu na zebraniu, ale rating zachowuje klasę CC/CCC).
+     * `8–12 msc`: **15 pkt** (brak) / **30 pkt** (poślizg) — utrwalone zadłużenie do 1 roku (klasa C).
+     * `> 12 msc`: **0 pkt** (brak) / **15 pkt** (poślizg) — głęboka niewypłacalność / wieloletni brak wpłat (spadek do DDD).
+   * Dzięki łagodnemu, schodkowemu wygaszaniu punktów członek, który spóźnił się o tydzień lub miesiąc po karencji, nie spada natychmiast z AA do najniższej klasy DDD obok dłużników z wieloletnim brakiem wpłat.
 5. **Rating Koła = MEDIANA, a nie Średnia**:
    * Główny wskaźnik wiarygodności koła jest wyliczany jako **mediana statystyczna** (`statistics.median`) ze scoringów członków.
    * Średnia arytmetyczna jest podawana jedynie pomocniczo w nawiasie.

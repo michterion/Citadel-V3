@@ -258,27 +258,53 @@ def oblicz_rating_celestia_dla_czlonka(
             else:
                 miesiace_dlugu = abs(saldo_na_wym_gr) / stawka_g_gr
 
-                # Najpierw sprawdzamy dług względem karencji (> 6 msc = brak prawa głosu na zebraniu)
-                if miesiace_dlugu > 6.0:
+                # 1. Głęboka niewypłacalność / Default (> 12 msc długu)
+                if miesiace_dlugu > 12.0:
                     if pokryto_po_poslizgu:
-                        pkt_zdarzenia = 20
-                        status_zdarzenia = "🔴 Spłata ratunkowa po terminie — brak prawa głosu w dniu zebrania"
+                        pkt_zdarzenia = 15
+                        status_zdarzenia = f"🟡 Spłata ratunkowa wieloletniego długu po terminie ({miesiace_dlugu:.1f} msc) — brak prawa głosu w dniu zebrania"
                     else:
                         pkt_zdarzenia = 0
                         if dzis <= termin_wymagalnosci:
-                            status_zdarzenia = f"🔴 Brak prawa głosu na zebraniu (> 6 msc długu: {miesiace_dlugu:.1f} msc)"
+                            status_zdarzenia = f"🔴 Brak prawa głosu na zebraniu — głęboka niewypłacalność (> 12 msc: {miesiace_dlugu:.1f} msc)"
                         else:
-                            status_zdarzenia = f"🔴 Utrata prawa głosu (> 6 msc długu: {miesiace_dlugu:.1f} msc)"
-                elif miesiace_dlugu > 2.0:
-                    # Na krawędzi karencji (2 - 6 msc — zachowane prawo głosu na zebraniu)
+                            status_zdarzenia = f"🔴 Utrata prawa głosu — głęboka niewypłacalność (> 12 msc: {miesiace_dlugu:.1f} msc)"
+
+                # 2. Utrwalone zadłużenie (8 - 12 msc długu — do 1 roku)
+                elif miesiace_dlugu > 8.0:
                     if pokryto_po_poslizgu:
-                        pkt_zdarzenia = 60
+                        pkt_zdarzenia = 30
+                        status_zdarzenia = f"🟡 Spłata ratunkowa utrwalonego długu po terminie ({miesiace_dlugu:.1f} msc) — brak prawa głosu w dniu zebrania"
+                    else:
+                        pkt_zdarzenia = 15
+                        if dzis <= termin_wymagalnosci:
+                            status_zdarzenia = f"🔴 Brak prawa głosu na zebraniu — utrwalone zadłużenie ({miesiace_dlugu:.1f} msc)"
+                        else:
+                            status_zdarzenia = f"🔴 Utrata prawa głosu — utrwalone zadłużenie ({miesiace_dlugu:.1f} msc)"
+
+                # 3. Świeże przekroczenie karencji (6 - 8 msc długu — utrata prawa głosu od niedawna)
+                elif miesiace_dlugu > 6.0:
+                    if pokryto_po_poslizgu:
+                        pkt_zdarzenia = 45
+                        status_zdarzenia = f"🟡 Spłata ratunkowa po terminie ({miesiace_dlugu:.1f} msc) — brak prawa głosu w dniu zebrania"
+                    else:
+                        pkt_zdarzenia = 25
+                        if dzis <= termin_wymagalnosci:
+                            status_zdarzenia = f"🔴 Brak prawa głosu na zebraniu — świeże przekroczenie karencji ({miesiace_dlugu:.1f} msc)"
+                        else:
+                            status_zdarzenia = f"🔴 Utrata prawa głosu — świeże przekroczenie karencji ({miesiace_dlugu:.1f} msc)"
+
+                # 4. Na krawędzi karencji (2 - 6 msc długu — zachowane prawo głosu na zebraniu)
+                elif miesiace_dlugu > 2.0:
+                    if pokryto_po_poslizgu:
+                        pkt_zdarzenia = 65
                         status_zdarzenia = "🟡 Pełna spłata zaległości z lekkim poślizgiem (do 3 dni po terminie) — zachowane prawo głosu"
                     else:
-                        pkt_zdarzenia = 35
+                        pkt_zdarzenia = 40
                         status_zdarzenia = f"🟠 Na krawędzi karencji ({miesiace_dlugu:.1f} msc) — zachowane prawo głosu"
+
+                # 5. Drobne zadłużenie (<= 2 msc długu — pełne prawo głosu)
                 else:
-                    # Drobne zadłużenie (<= 2 msc)
                     if pokryto_po_poslizgu:
                         pkt_zdarzenia = 90
                         status_zdarzenia = "🟢 Drobne zadłużenie spłacone w poślizgu (do 3 dni po terminie)"

@@ -21,8 +21,7 @@ Aplikacja integruje mechanizmy księgowości składek ze statutowym prawem głos
   * **Ewaluacja zebrań w trakcie zbiórki i nadchodzących**: Celestia włącza do oceny zarówno zebrania historyczne, jak i zebrania z aktywnie otwartym oknem zbiórki (`d_od <= dzis`) oraz nadchodzące w ciągu 30 dni — dzięki temu przed zebraniem członkowie i skarbnik widzą swój realny status i uprawnienie do głosu.
 * **Wagi Filarów i Odporność na Nadużycia**:
   * Główną wagę stanowią **Wpłaty w Oknie przed Głosowaniami (65%)**, uzupełniane przez **Bieżące Saldo (20%)**, **KDI (10%)** oraz **Rytm Płatności (5%)**.
-  * Drobna, symboliczna wpłata po terminie nie zawyża ratingu dłużnika — okno poślizgu (3 dni) podnosi ocenę tylko wtedy, gdy wpłacona kwota faktycznie likwiduje powstałe zadłużenie.
-  * **Ścisłe rozróżnienie prawa głosu**: Spłata poślizgowa daje 60 pkt tylko osobie, która na zebraniu zachowała prawo głosu (dług 2–6 msc). Osoba bez prawa głosu (dług > 6 msc) za spłatę ratunkową po fakcie otrzymuje jedynie 20 pkt, co zapobiega nagradzaniu bierności przed samym głosowaniem.
+  * **Progresywna skala oceny zapadalności po karencji**: Zamiast zerojedynkowego karania zerem wszystkich dłużników powyżej 6 miesięcy, algorytm stosuje stopniowe wygaszanie punktów: 6–8 msc (25 pkt, klasa CC/CCC), 8–12 msc (15 pkt, klasa C), a dopiero powyżej 1 roku długu — 0 pkt (klasa DDD). Spłata poślizgowa (3 dni) premiuje pełne uregulowanie długu adekwatnie do zachowanego uprawnienia do głosu (65 pkt dla długu 2–6 msc, 45 pkt dla 6–8 msc, 30 pkt dla 8–12 msc).
 * **Indeks Wiarygodności Koła (Mediana)**:
   * Rating całego koła jest obliczany jako **mediana statystyczna** scoringów członków (`statistics.median`), co zapobiega zniekształceniu obrazu koła przez pojedynczego skrajnego dłużnika.
 
