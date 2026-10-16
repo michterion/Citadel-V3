@@ -254,19 +254,19 @@ def oblicz_rating_celestia_dla_czlonka(
             else:
                 miesiace_dlugu = abs(saldo_na_wym_gr) / stawka_g_gr
 
-                # Najpierw sprawdzamy dług względem karencji (> 6 msc = utrata prawa głosu)
+                # Najpierw sprawdzamy dług względem karencji (> 6 msc = brak prawa głosu na zebraniu)
                 if miesiace_dlugu > 6.0:
                     if pokryto_po_poslizgu:
-                        pkt_zdarzenia = 60
-                        status_zdarzenia = "🟡 Pełna spłata zadłużenia z lekkim poślizgiem (do 3 dni po terminie)"
+                        pkt_zdarzenia = 20
+                        status_zdarzenia = "🔴 Spłata ratunkowa po terminie — brak prawa głosu w dniu zebrania"
                     else:
                         pkt_zdarzenia = 0
                         status_zdarzenia = f"🔴 Utrata prawa głosu (> 6 msc długu: {miesiace_dlugu:.1f} msc)"
                 elif miesiace_dlugu > 2.0:
-                    # Na krawędzi karencji (2 - 6 msc)
+                    # Na krawędzi karencji (2 - 6 msc — zachowane prawo głosu na zebraniu)
                     if pokryto_po_poslizgu:
                         pkt_zdarzenia = 60
-                        status_zdarzenia = "🟡 Pełna spłata zaległości z lekkim poślizgiem (do 3 dni po terminie)"
+                        status_zdarzenia = "🟡 Pełna spłata zaległości z lekkim poślizgiem (do 3 dni po terminie) — zachowane prawo głosu"
                     else:
                         pkt_zdarzenia = 35
                         status_zdarzenia = f"🟠 Na krawędzi karencji ({miesiace_dlugu:.1f} msc) — zachowane prawo głosu"

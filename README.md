@@ -21,6 +21,7 @@ Aplikacja integruje mechanizmy księgowości składek ze statutowym prawem głos
 * **Wagi Filarów i Odporność na Nadużycia**:
   * Główną wagę stanowią **Wpłaty w Oknie przed Głosowaniami (65%)**, uzupełniane przez **Bieżące Saldo (20%)**, **KDI (10%)** oraz **Rytm Płatności (5%)**.
   * Drobna, symboliczna wpłata po terminie nie zawyża ratingu dłużnika — okno poślizgu (3 dni) podnosi ocenę tylko wtedy, gdy wpłacona kwota faktycznie likwiduje powstałe zadłużenie.
+  * **Ścisłe rozróżnienie prawa głosu**: Spłata poślizgowa daje 60 pkt tylko osobie, która na zebraniu zachowała prawo głosu (dług 2–6 msc). Osoba bez prawa głosu (dług > 6 msc) za spłatę ratunkową po fakcie otrzymuje jedynie 20 pkt, co zapobiega nagradzaniu bierności przed samym głosowaniem.
 * **Indeks Wiarygodności Koła (Mediana)**:
   * Rating całego koła jest obliczany jako **mediana statystyczna** scoringów członków (`statistics.median`), co zapobiega zniekształceniu obrazu koła przez pojedynczego skrajnego dłużnika.
 

@@ -70,9 +70,12 @@ Ten plik stanowi trwałą pamięć projektu dla asystentów AI (Antigravity). Za
    * **Bieżące Saldo i Karencja**: **20%** — stały bezpiecznik stanu konta.
    * **Wskaźnik Pokrycia KDI**: **10%** — bilans wpłat do naliczeń.
    * **Rytm i Regularność Wpłat**: **5%** — ciągłość i rytmika transakcji.
-4. **Zabezpieczenie przed Symboliczną Wpłatą w Poślizgu**:
-   * Okienko poślizgu (do 3 dni po terminie) jest uznawane **wyłącznie wtedy, gdy wpłata faktycznie pokrywa zadłużenie** (`saldo_na_wym_gr + wplaty_poslizg_gr >= 0`).
-   * Zawsze w pierwszej kolejności sprawdzany jest dług względem karencji — dług powyżej 6 miesięcy bez pełnej spłaty skutkuje bezwzględnie oceną 0 pkt (brak prawa głosu).
+4. **Zabezpieczenie przed Symboliczną Wpłatą i Rozdział Prawa Głosu w Poślizgu**:
+   * Okienko poślizgu (do 3 dni po terminie) jest uznawane **wyłącznie wtedy, gdy wpłata faktycznie pokrywa całe zadłużenie** (`saldo_na_wym_gr + wplaty_poslizg_gr >= 0`).
+   * **Rozdział wg prawa głosu**:
+     * Osoba z długiem 2–6 msc (która **miała prawo głosu na zebraniu**) po pełnej spłacie w poślizgu otrzymuje **60 pkt**.
+     * Osoba z długiem > 6 msc (która **nie miała prawa głosu na zebraniu**) po spłacie ratunkowej w poślizgu otrzymuje zaledwie **20 pkt** (nie ma mowy o nagradzaniu 60 pkt kogoś, kto był dłużnikiem bez prawa głosu).
+     * Dług powyżej 6 miesięcy bez pełnej spłaty skutkuje bezwzględnie oceną **0 pkt**.
 5. **Rating Koła = MEDIANA, a nie Średnia**:
    * Główny wskaźnik wiarygodności koła jest wyliczany jako **mediana statystyczna** (`statistics.median`) ze scoringów członków.
    * Średnia arytmetyczna jest podawana jedynie pomocniczo w nawiasie.
