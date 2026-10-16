@@ -1,14 +1,15 @@
 import calendar
 from datetime import date, timedelta
+
 import pandas as pd
 import streamlit as st
-
+from calculations import filtruj_interwal, oblicz_naliczenia_gr, pobierz_stawke_za_miesiac
+from celestia import pobierz_kolor_celestia
+from components.charts import PLOTLY_CONFIG, czy_jasny_motyw, render_wykres_kdi, render_wykres_salda
+from components.ui import render_bento_card
 from config import DATA_ODCIECIA, parse_date, pobierz_kolor_kdi
 from database import db_query
-from calculations import oblicz_naliczenia_gr, filtruj_interwal, pobierz_stawke_za_miesiac
-from components.charts import render_wykres_salda, render_wykres_kdi, PLOTLY_CONFIG, czy_jasny_motyw
-from components.ui import render_bento_card
-from celestia import pobierz_kolor_celestia
+
 
 def render_tab_profile(dane_przeliczone, dzis):
     if not dane_przeliczone:
@@ -19,11 +20,11 @@ def render_tab_profile(dane_przeliczone, dzis):
     mapa_osob = {d["id"]: f"{d['imie_nazwisko']} (Saldo: {d['saldo_akt_pln']:.2f} zł, KDI: {d['kdi_str']}, Celestia: {d.get('celestia_rating', '—')})" for d in dane_przeliczone}
     wybrany_id = st.selectbox("Wybierz członka do analizy wskaźników", options=list(mapa_osob.keys()), format_func=lambda x: mapa_osob[x])
     osoba = next(item for item in dane_przeliczone if item["id"] == wybrany_id)
-    
+
     kolor_kdi_osoby = pobierz_kolor_kdi(osoba["kdi_val"])
     kolor_glos = "#10b981" if osoba["moze_glosowac"] else "#f43f5e"
     kolor_celestia = pobierz_kolor_celestia(osoba.get("celestia_rating", "DDD"), is_light)
-    
+
     st.markdown(f"""
         <div class="profile-banner-card">
             <div><span style="color: #94a3b8; font-size: 0.85rem;">CZŁONEK:</span> <strong style="font-size: 1rem;">{osoba['imie_nazwisko']}</strong></div>
@@ -111,7 +112,7 @@ def render_tab_profile(dane_przeliczone, dzis):
     punkty_x = [r["date_str"] for r in rekordy_do_wykresu]
     punkty_saldo = [r["saldo"] for r in rekordy_do_wykresu]
     punkty_kdi = [r["kdi"] for r in rekordy_do_wykresu]
-        
+
     subtab_saldo, subtab_kdi = st.tabs(["📉 Oś Czasu Salda (PLN)", "🎯 Dynamika Wskaźnika KDI"])
     with subtab_saldo:
         st.plotly_chart(render_wykres_salda(punkty_x, punkty_saldo), width="stretch", config=PLOTLY_CONFIG)
@@ -160,13 +161,13 @@ def render_tab_profile(dane_przeliczone, dzis):
         vdc_val = filary.get("vdc_score")
         vdc_text = f"{vdc_val} pkt" if vdc_val is not None else "Brak zebrań"
         sub_text = f"W oparciu o {filary.get('liczba_glosowan', 0)} głosowań" if vdc_val is not None else "Brak zarejestrowanych zebrań"
-        render_bento_card("Dyscyplina Głosowań (55%)", vdc_text, sub_text, "accent-cyan")
+        render_bento_card("Dyscyplina Głosowań (65%)", vdc_text, sub_text, "accent-cyan")
     with cf2:
-        render_bento_card("Wskaźnik KDI (20%)", f"{filary.get('kdi_score', 0)} pkt", f"KDI: {osoba['kdi_str']}", "accent-green")
+        render_bento_card("Wskaźnik KDI (10%)", f"{filary.get('kdi_score', 0)} pkt", f"KDI: {osoba['kdi_str']}", "accent-green")
     with cf3:
-        render_bento_card("Bieżące Saldo (15%)", f"{filary.get('saldo_score', 0)} pkt", f"Saldo: {osoba['saldo_akt_pln']:.2f} zł", "accent-purple")
+        render_bento_card("Bieżące Saldo (20%)", f"{filary.get('saldo_score', 0)} pkt", f"Saldo: {osoba['saldo_akt_pln']:.2f} zł", "accent-purple")
     with cf4:
-        render_bento_card("Rytm Płatności (10%)", f"{filary.get('rytm_score', 0)} pkt", f"Liczba wpłat: {len(hist_wplaty)}", "accent-rose")
+        render_bento_card("Rytm Płatności (5%)", f"{filary.get('rytm_score', 0)} pkt", f"Liczba wpłat: {len(hist_wplaty)}", "accent-rose")
 
     audyt_glosowan = osoba.get("celestia_audyt_glosowan", [])
     if audyt_glosowan:

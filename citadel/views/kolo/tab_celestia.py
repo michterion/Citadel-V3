@@ -1,17 +1,14 @@
-import pandas as pd
-import streamlit as st
-import plotly.graph_objects as go
 from datetime import date, timedelta
 
-from config import dzis_pl, formatuj_czas_pl
-from database import (
-    pobierz_terminy_glosowan_kola,
-    dodaj_termin_glosowania,
-    usun_termin_glosowania
-)
-from celestia import POZIOMY_CELESTIA, pobierz_kolor_celestia
-from components.ui import render_bento_card
+import pandas as pd
+import plotly.graph_objects as go
+import streamlit as st
+from celestia import POZIOMY_CELESTIA, _num, pobierz_kolor_celestia
 from components.charts import PLOTLY_CONFIG, czy_jasny_motyw
+from components.ui import render_bento_card
+from config import dzis_pl, formatuj_czas_pl
+from database import dodaj_termin_glosowania, pobierz_terminy_glosowan_kola, usun_termin_glosowania
+
 
 def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_id: int, dzis: date):
     st.markdown("### ⭐ Panel Celestia — Rating Wypłacalności i Dni Zapadalności")
@@ -35,16 +32,16 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
         # Obliczenie statystyk klas wiarygodności
         ranking_posortowany = sorted(dane_przeliczone, key=lambda x: x.get("celestia_score", 0), reverse=True)
         total_czlonkow = len(ranking_posortowany)
-        
+
         liczba_prime = sum(1 for d in ranking_posortowany if d.get("celestia_rating") in ["AAA", "AA", "A"])
         liczba_medium = sum(1 for d in ranking_posortowany if d.get("celestia_rating") in ["BBB", "BB", "B"])
         liczba_risk = sum(1 for d in ranking_posortowany if d.get("celestia_rating") in ["CCC", "CC", "C", "DDD"])
-        
+
         import statistics
         scores_kola = [d.get("celestia_score", 0) for d in ranking_posortowany]
         mediana_score = int(round(statistics.median(scores_kola))) if scores_kola else 0
         srednia_score = int(round(sum(scores_kola) / max(total_czlonkow, 1))) if scores_kola else 0
-        
+
         # Wyznaczenie ratingu koła na podstawie MEDIANY (odpornej na skrajności)
         from celestia import pobierz_definicje_ratingu
         def_mediana = pobierz_definicje_ratingu(mediana_score)
@@ -85,7 +82,7 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
             )
 
         st.markdown("#### 📊 Rozkład Poziomów Ratingowych w Kole")
-        
+
         # Wykres słupkowy rozkładu ratingów
         kody_kolejnosc = [p["kod"] for p in POZIOMY_CELESTIA]
         liczniki_poziomow = {k: 0 for k in kody_kolejnosc}
@@ -126,7 +123,7 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
 
         # Filtrowanie i tabela rankingu
         st.markdown("#### 📋 Szczegółowy Ranking Wiarygodności Członków")
-        
+
         opcje_filtr = ["Wszyscy", "Tylko Prime (AAA — A)", "Tylko Średnia (BBB — B)", "Tylko Zagrożeni (CCC — DDD)"]
         wybrany_filtr = st.radio("Filtruj wg klasy ratingu:", opcje_filtr, horizontal=True, label_visibility="collapsed")
 
@@ -157,7 +154,7 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
             })
 
         df_rank = pd.DataFrame(tabela_dane)
-        
+
         def stylizuj_celestia_ranking(wartosc):
             kolor = pobierz_kolor_celestia(wartosc, is_light)
             return f"color: {kolor}; font-weight: 800; font-size: 1.05rem;"
@@ -204,7 +201,7 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
 
             st.markdown("###### ⏱️ Okno zbiórki składek i termin wymagalności (dopasowane do wielkości koła)")
             st.caption("W małym kole wystarczy krótsze okno (np. 5–7 dni), w dużym kole dłuższe (np. 14–30 dni). Nie stosujemy sztywnego 14-dniowego limitu.")
-            
+
             c_okno1, c_okno2, c_okno3 = st.columns([2, 2, 3])
             with c_okno1:
                 dni_przed_input = st.number_input(
@@ -266,8 +263,12 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
             tablica_terminow = []
             for _, r in terminy_df.iterrows():
                 d_glos = r["data_glosowania"]
-                d_od = r["data_zbiorki_od"] if pd.notna(r.get("data_zbiorki_od")) else (d_glos - timedelta(days=int(r.get("dni_zbiorki_przed") or 14)))
-                d_do = r["data_wymagalnosci_do"] if pd.notna(r.get("data_wymagalnosci_do")) else (d_glos + timedelta(days=int(r.get("dni_wymagalnosci_po") or 0)))
+                dni_przed = int(_num(r.get("dni_zbiorki_przed"), 14))
+                dni_po = int(_num(r.get("dni_wymagalnosci_po"), 0))
+                waga_val = float(_num(r.get("waga"), 1.0))
+
+                d_od = r["data_zbiorki_od"] if pd.notna(r.get("data_zbiorki_od")) else (d_glos - timedelta(days=dni_przed))
+                d_do = r["data_wymagalnosci_do"] if pd.notna(r.get("data_wymagalnosci_do")) else (d_glos + timedelta(days=dni_po))
                 dni_trwania = (d_do - d_od).days + 1
 
                 tablica_terminow.append({
@@ -276,7 +277,7 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
                     "Nazwa Wydarzenia": r["nazwa"],
                     "Okno Zbiórki": f"{d_od} → {d_do} ({dni_trwania} dni)",
                     "Termin Wymagalności": str(d_do),
-                    "Ranga / Waga": f"{float(r['waga']):.1f}x",
+                    "Ranga / Waga": f"{waga_val:.1f}x",
                     "Opis": r["opis"] or "—",
                     "Zarejestrował": r["dodal_imie"] or "System",
                     "Data Wpisu": formatuj_czas_pl(r["utworzono_o"])
@@ -284,8 +285,8 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
 
             df_t = pd.DataFrame(tablica_terminow)
             st.dataframe(
-                df_t[["Data Głosowania", "Nazwa Wydarzenia", "Okno Zbiórki", "Termin Wymagalności", "Ranga / Waga", "Opis", "Zarejestrował", "Data Wpisu"]], 
-                width="stretch", 
+                df_t[["Data Głosowania", "Nazwa Wydarzenia", "Okno Zbiórki", "Termin Wymagalności", "Ranga / Waga", "Opis", "Zarejestrował", "Data Wpisu"]],
+                width="stretch",
                 hide_index=True
             )
 

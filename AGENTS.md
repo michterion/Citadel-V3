@@ -65,10 +65,21 @@ Ten plik stanowi trwałą pamięć projektu dla asystentów AI (Antigravity). Za
      * `dni_zbiorki_przed` (1–90 dni, np. 5–7 dni w małych kołach, 14–30 dni w dużych)
      * `dni_wymagalnosci_po` (dopuszczalny poślizg 0–30 dni)
    * **Waga czasowa (*time-decay*)**: `waga_czasu = exp(-0.0018 * dni_od_glosowania)` faworyzuje najświeższe zachowania płatnicze.
-3. **Rating Koła = MEDIANA, a nie Średnia**:
+3. **Wagi Filarów Scoringowych**:
+   * **Głosowania i Zapadalność (VDC)**: **65%** — kluczowy wyznacznik wiarygodności.
+   * **Bieżące Saldo i Karencja**: **20%** — stały bezpiecznik stanu konta.
+   * **Wskaźnik Pokrycia KDI**: **10%** — bilans wpłat do naliczeń.
+   * **Rytm i Regularność Wpłat**: **5%** — ciągłość i rytmika transakcji.
+4. **Zabezpieczenie przed Symboliczną Wpłatą w Poślizgu**:
+   * Okienko poślizgu (do 3 dni po terminie) jest uznawane **wyłącznie wtedy, gdy wpłata faktycznie pokrywa zadłużenie** (`saldo_na_wym_gr + wplaty_poslizg_gr >= 0`).
+   * Zawsze w pierwszej kolejności sprawdzany jest dług względem karencji — dług powyżej 6 miesięcy bez pełnej spłaty skutkuje bezwzględnie oceną 0 pkt (brak prawa głosu).
+5. **Rating Koła = MEDIANA, a nie Średnia**:
    * Główny wskaźnik wiarygodności koła jest wyliczany jako **mediana statystyczna** (`statistics.median`) ze scoringów członków.
    * Średnia arytmetyczna jest podawana jedynie pomocniczo w nawiasie.
    * Mediana chroni koło przed zafałszowaniem wskaźnika przez pojedyncze osoby nieaktywne/dłużników.
+6. **Bezpieczne Parsowanie Kolumn SQL / Pandas**:
+   * Zawsze stosuj helper `_num(v, d): return d if v is None or pd.isna(v) else v` przy odczytywaniu kolumn z tabeli `terminy_glosowan` (`dni_zbiorki_przed`, `dni_wymagalnosci_po`, `waga`), aby zapobiec `ValueError` przy wartościach `NaN`.
+   * Importy parametrów stawek (`pobierz_parametr`) muszą znajdować się na górze modułów, bez cichego tłumienia błędów `except Exception: pass`.
 
 ---
 

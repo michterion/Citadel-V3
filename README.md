@@ -18,6 +18,9 @@ Aplikacja integruje mechanizmy księgowości składek ze statutowym prawem głos
   * W praktyce organizacyjnej składki stają się wymagalne w perspektywie zebrań i głosowań.
   * **Elastyczne okno zbiórki**: Każde koło konfiguruje własną długość zbiórki (`dni_zbiorki_przed`: np. 5–7 dni w małych kołach, 14–30 dni w dużych) oraz dopuszczalny poślizg (`dni_wymagalnosci_po`).
   * **Wykładnicze zanikanie w czasie (*time-decay*)**: Ostatnie głosowania ważą najwięcej w ratingu (`exp(-0.0018 * dni)`).
+* **Wagi Filarów i Odporność na Nadużycia**:
+  * Główną wagę stanowią **Wpłaty w Oknie przed Głosowaniami (65%)**, uzupełniane przez **Bieżące Saldo (20%)**, **KDI (10%)** oraz **Rytm Płatności (5%)**.
+  * Drobna, symboliczna wpłata po terminie nie zawyża ratingu dłużnika — okno poślizgu (3 dni) podnosi ocenę tylko wtedy, gdy wpłacona kwota faktycznie likwiduje powstałe zadłużenie.
 * **Indeks Wiarygodności Koła (Mediana)**:
   * Rating całego koła jest obliczany jako **mediana statystyczna** scoringów członków (`statistics.median`), co zapobiega zniekształceniu obrazu koła przez pojedynczego skrajnego dłużnika.
 

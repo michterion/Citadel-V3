@@ -1,8 +1,14 @@
 import math
 from datetime import date, timedelta
+
 import pandas as pd
-from config import parse_date, DATA_ODCIECIA
-from calculations import pobierz_stawke_za_miesiac, oblicz_naliczenia_gr
+from calculations import oblicz_naliczenia_gr, pobierz_parametr, pobierz_stawke_za_miesiac
+from config import parse_date
+
+
+def _num(v, d):
+    """Bezpieczne pobieranie wartości liczbowej z pandas / SQL (odporne na None i NaN)."""
+    return d if v is None or pd.isna(v) else v
 
 # =========================================================================
 # DEFINICJA SKALI RATINGOWEJ CELESTIA (AAA -> DDD)
@@ -114,7 +120,7 @@ def pobierz_kolor_celestia(rating_kod_lub_score, is_light: bool = False) -> str:
     if isinstance(rating_kod_lub_score, (int, float)):
         def_r = pobierz_definicje_ratingu(int(rating_kod_lub_score))
         return def_r["kolor_light"] if is_light else def_r["kolor_dark"]
-    
+
     kod = str(rating_kod_lub_score).strip().upper()
     for p in POZIOMY_CELESTIA:
         if p["kod"] == kod:
@@ -136,7 +142,7 @@ def oblicz_rating_celestia_dla_czlonka(
 ) -> dict:
     """
     Oblicza indywidualny rating Celestia dla danego członka koła.
-    
+
     Główny filar (VDC): dyscyplina spłaty w okienku zapadalności wokół terminów głosowań koła.
     Pozostałe filary: KDI, bieżący stan salda, rytm wpłat.
     """
@@ -146,12 +152,8 @@ def oblicz_rating_celestia_dla_czlonka(
     saldo_start_gr = int(dane_czlonka.get("saldo_start_gr", 0))
     saldo_akt_gr = int(dane_czlonka.get("saldo_akt_gr", 0))
     kdi_val = dane_czlonka.get("kdi_val")
-    stawka_biezaca_gr = 1500  # domyślny fallback
-    try:
-        from calculations import pobierz_parametr
-        _, stawka_biezaca_gr = pobierz_parametr(data_ur, reczny_param, dzis)
-    except Exception:
-        pass
+    _, stawka_biezaca_gr = pobierz_parametr(data_ur, reczny_param, dzis)
+    stawka_biezaca_gr = max(stawka_biezaca_gr, 600)
 
     # Mapy wpłat, korekt i naliczeń wg daty
     wplaty_map = {}
@@ -173,11 +175,11 @@ def oblicz_rating_celestia_dla_czlonka(
             korekty_map[d] = korekty_map.get(d, 0) + int(r["delta_gr"])
 
     # ---------------------------------------------------------------------
-    # FILAR 1: Voting Due Compliance (VDC) - Waga: 55%
+    # FILAR 1: Voting Due Compliance (VDC) - Waga: 65%
     # ---------------------------------------------------------------------
     audyt_glosowan = []
     vdc_score = None
-    
+
     glosowania_w_stazu = []
     if terminy_glosowan_df is not None and not terminy_glosowan_df.empty:
         for _, row_g in terminy_glosowan_df.iterrows():
@@ -187,14 +189,14 @@ def oblicz_rating_celestia_dla_czlonka(
                 if pd.notna(row_g.get("data_zbiorki_od")):
                     d_od = parse_date(row_g["data_zbiorki_od"])
                 else:
-                    dni_przed = int(row_g.get("dni_zbiorki_przed") or 14)
+                    dni_przed = int(_num(row_g.get("dni_zbiorki_przed"), 14))
                     d_od = d_glos - timedelta(days=dni_przed)
 
                 # Dynamiczny ostateczny termin wymagalności
                 if pd.notna(row_g.get("data_wymagalnosci_do")):
                     d_do = parse_date(row_g["data_wymagalnosci_do"])
                 else:
-                    dni_po = int(row_g.get("dni_wymagalnosci_po") or 0)
+                    dni_po = int(_num(row_g.get("dni_wymagalnosci_po"), 0))
                     d_do = d_glos + timedelta(days=dni_po)
 
                 glosowania_w_stazu.append({
@@ -203,7 +205,7 @@ def oblicz_rating_celestia_dla_czlonka(
                     "data_zbiorki_od": d_od,
                     "data_wymagalnosci_do": d_do,
                     "nazwa": row_g.get("nazwa", "Głosowanie Koła"),
-                    "waga": float(row_g.get("waga", 1.0))
+                    "waga": float(_num(row_g.get("waga"), 1.0))
                 })
 
     if glosowania_w_stazu:
@@ -223,7 +225,7 @@ def oblicz_rating_celestia_dla_czlonka(
             sum_rec_do_wym = sum(kw for d, kw in reczne_map.items() if d <= termin_wymagalnosci)
             sum_kor_do_wym = sum(kw for d, kw in korekty_map.items() if d <= termin_wymagalnosci)
             nal_auto_do_wym, _ = oblicz_naliczenia_gr(data_wst, data_ur, reczny_param, termin_wymagalnosci)
-            
+
             saldo_na_wym_gr = saldo_start_gr + sum_wpl_do_wym + sum_kor_do_wym - (nal_auto_do_wym + sum_rec_do_wym)
 
             # Wpłaty w skonfigurowanym oknie zbiórki: [okno_start, termin_wymagalnosci]
@@ -240,6 +242,9 @@ def oblicz_rating_celestia_dla_czlonka(
             dni_okna = max(1, (termin_wymagalnosci - okno_start).days)
 
             # Ocena zdarzenia głosowania (0 - 100 pkt)
+            saldo_po_poslizgu_gr = saldo_na_wym_gr + wplaty_poslizg_gr
+            pokryto_po_poslizgu = (wplaty_poslizg_gr > 0 and saldo_po_poslizgu_gr >= 0)
+
             if saldo_na_wym_gr >= 0:
                 pkt_zdarzenia = 100
                 if wplaty_w_oknie_gr > 0:
@@ -248,18 +253,31 @@ def oblicz_rating_celestia_dla_czlonka(
                     status_zdarzenia = "🟢 Stała nadpłata / Czyste konto"
             else:
                 miesiace_dlugu = abs(saldo_na_wym_gr) / stawka_g_gr
-                if wplaty_poslizg_gr > 0:
-                    pkt_zdarzenia = 60
-                    status_zdarzenia = "🟡 Spłata z lekkim poślizgiem (do 3 dni po terminie)"
-                elif miesiace_dlugu <= 2.0:
-                    pkt_zdarzenia = 80
-                    status_zdarzenia = f"🟢 Drobne zadłużenie ({miesiace_dlugu:.1f} msc) — zachowane prawo głosu"
-                elif miesiace_dlugu <= 6.0:
-                    pkt_zdarzenia = 35
-                    status_zdarzenia = f"🟠 Na krawędzi karencji ({miesiace_dlugu:.1f} msc) — zachowane prawo głosu"
+
+                # Najpierw sprawdzamy dług względem karencji (> 6 msc = utrata prawa głosu)
+                if miesiace_dlugu > 6.0:
+                    if pokryto_po_poslizgu:
+                        pkt_zdarzenia = 60
+                        status_zdarzenia = "🟡 Pełna spłata zadłużenia z lekkim poślizgiem (do 3 dni po terminie)"
+                    else:
+                        pkt_zdarzenia = 0
+                        status_zdarzenia = f"🔴 Utrata prawa głosu (> 6 msc długu: {miesiace_dlugu:.1f} msc)"
+                elif miesiace_dlugu > 2.0:
+                    # Na krawędzi karencji (2 - 6 msc)
+                    if pokryto_po_poslizgu:
+                        pkt_zdarzenia = 60
+                        status_zdarzenia = "🟡 Pełna spłata zaległości z lekkim poślizgiem (do 3 dni po terminie)"
+                    else:
+                        pkt_zdarzenia = 35
+                        status_zdarzenia = f"🟠 Na krawędzi karencji ({miesiace_dlugu:.1f} msc) — zachowane prawo głosu"
                 else:
-                    pkt_zdarzenia = 0
-                    status_zdarzenia = f"🔴 Utrata prawa głosu (> 6 msc długu: {miesiace_dlugu:.1f} msc)"
+                    # Drobne zadłużenie (<= 2 msc)
+                    if pokryto_po_poslizgu:
+                        pkt_zdarzenia = 90
+                        status_zdarzenia = "🟢 Drobne zadłużenie spłacone w poślizgu (do 3 dni po terminie)"
+                    else:
+                        pkt_zdarzenia = 80
+                        status_zdarzenia = f"🟢 Drobne zadłużenie ({miesiace_dlugu:.1f} msc) — zachowane prawo głosu"
 
             # Współczynnik zanikania w czasie (time-decay): ostatnie głosowania ważą najwięcej
             dni_od_glos = max(0, (dzis - d_glos).days)
@@ -286,7 +304,7 @@ def oblicz_rating_celestia_dla_czlonka(
             vdc_score = int(round((suma_wazona_punktow / suma_wag) * 10))
 
     # ---------------------------------------------------------------------
-    # FILAR 2: Wskaźnik Pokrycia Zadłużenia KDI - Waga: 20%
+    # FILAR 2: Wskaźnik Pokrycia Zadłużenia KDI - Waga: 10%
     # ---------------------------------------------------------------------
     if kdi_val is None:
         naliczone_gr = int(dane_czlonka.get("naliczone_gr", 0))
@@ -304,7 +322,7 @@ def oblicz_rating_celestia_dla_czlonka(
             kdi_score = 50
 
     # ---------------------------------------------------------------------
-    # FILAR 3: Bieżące Saldo i Karencja - Waga: 15%
+    # FILAR 3: Bieżące Saldo i Karencja - Waga: 20%
     # ---------------------------------------------------------------------
     if saldo_akt_gr >= 0:
         saldo_score = 1000
@@ -320,11 +338,11 @@ def oblicz_rating_celestia_dla_czlonka(
             saldo_score = max(0, int(round(150 - (m_dlug - 6.0) * 25)))
 
     # ---------------------------------------------------------------------
-    # FILAR 4: Rytm i Regularność Wpłat - Waga: 10%
+    # FILAR 4: Rytm i Regularność Wpłat - Waga: 5%
     # ---------------------------------------------------------------------
     liczba_wplat = len(wplaty_map)
     staz_dni = max(1, (dzis - data_wst).days)
-    
+
     if liczba_wplat == 0:
         rytm_score = 50 if dane_czlonka.get("naliczone_gr", 0) > 0 else 800
     else:
@@ -351,17 +369,17 @@ def oblicz_rating_celestia_dla_czlonka(
     if vdc_score is not None:
         # Koło ma zarejestrowane głosowania w okresie stażu członka
         calkowity_score = int(round(
-            0.55 * vdc_score + 
-            0.20 * kdi_score + 
-            0.15 * saldo_score + 
-            0.10 * rytm_score
+            0.65 * vdc_score +
+            0.20 * saldo_score +
+            0.10 * kdi_score +
+            0.05 * rytm_score
         ))
     else:
         # Fallback gdy koło nie zdefiniowało jeszcze terminów głosowań
         calkowity_score = int(round(
-            0.45 * kdi_score + 
-            0.35 * saldo_score + 
-            0.20 * rytm_score
+            0.55 * saldo_score +
+            0.30 * kdi_score +
+            0.15 * rytm_score
         ))
 
     calkowity_score = max(0, min(1000, calkowity_score))
@@ -399,23 +417,23 @@ def przelicz_celestia_dla_calego_kola(kolo_id: int, dane_przeliczone: list, dzis
 
     # Pobranie historii wpłat, korekt i naliczeń dla koła w jednym zapytaniu per tabela
     wplaty_df = db_query("""
-        SELECT czlonek_id, kwota_gr, data_wplaty 
-        FROM wplaty 
-        WHERE czlonek_id = ANY(%s) AND data_wplaty <= %s 
+        SELECT czlonek_id, kwota_gr, data_wplaty
+        FROM wplaty
+        WHERE czlonek_id = ANY(%s) AND data_wplaty <= %s
         ORDER BY data_wplaty ASC
     """, (czlonek_ids, dzis))
 
     reczne_df = db_query("""
-        SELECT czlonek_id, kwota_gr, data_naliczenia 
-        FROM naliczenia_reczne 
-        WHERE czlonek_id = ANY(%s) AND data_naliczenia <= %s 
+        SELECT czlonek_id, kwota_gr, data_naliczenia
+        FROM naliczenia_reczne
+        WHERE czlonek_id = ANY(%s) AND data_naliczenia <= %s
         ORDER BY data_naliczenia ASC
     """, (czlonek_ids, dzis))
 
     korekty_df = db_query("""
-        SELECT czlonek_id, delta_gr, data_korekty 
-        FROM korekty 
-        WHERE czlonek_id = ANY(%s) AND data_korekty <= %s 
+        SELECT czlonek_id, delta_gr, data_korekty
+        FROM korekty
+        WHERE czlonek_id = ANY(%s) AND data_korekty <= %s
         ORDER BY data_korekty ASC
     """, (czlonek_ids, dzis))
 
@@ -447,7 +465,7 @@ def przelicz_celestia_dla_calego_kola(kolo_id: int, dane_przeliczone: list, dzis
             korekty_czlonka_df=korekty_by_czl.get(cid),
             dzis=dzis
         )
-        
+
         # Wzbogacenie słownika członka o metryki Celestia
         d_kopia = dict(d)
         d_kopia["celestia_score"] = res_celestia["score"]
