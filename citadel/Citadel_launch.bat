@@ -1,4 +1,9 @@
 @echo off
 cd /d "%~dp0"
-python -m streamlit run app.py
+where uv >nul 2>nul
+if %ERRORLEVEL% EQU 0 (
+    uv run streamlit run app.py
+) else (
+    python -m streamlit run app.py
+)
 pause

@@ -1,7 +1,7 @@
 import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
-from datetime import date
+from datetime import date, timedelta
 
 from config import dzis_pl, formatuj_czas_pl
 from database import (
@@ -40,21 +40,24 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
         liczba_medium = sum(1 for d in ranking_posortowany if d.get("celestia_rating") in ["BBB", "BB", "B"])
         liczba_risk = sum(1 for d in ranking_posortowany if d.get("celestia_rating") in ["CCC", "CC", "C", "DDD"])
         
-        sredni_score = int(round(sum(d.get("celestia_score", 0) for d in ranking_posortowany) / max(total_czlonkow, 1)))
+        import statistics
+        scores_kola = [d.get("celestia_score", 0) for d in ranking_posortowany]
+        mediana_score = int(round(statistics.median(scores_kola))) if scores_kola else 0
+        srednia_score = int(round(sum(scores_kola) / max(total_czlonkow, 1))) if scores_kola else 0
         
-        # Wyznaczenie średniego ratingu koła
+        # Wyznaczenie ratingu koła na podstawie MEDIANY (odpornej na skrajności)
         from celestia import pobierz_definicje_ratingu
-        def_sredni = pobierz_definicje_ratingu(sredni_score)
-        kolor_sredni = def_sredni["kolor_light"] if is_light else def_sredni["kolor_dark"]
+        def_mediana = pobierz_definicje_ratingu(mediana_score)
+        kolor_mediana = def_mediana["kolor_light"] if is_light else def_mediana["kolor_dark"]
 
         # 4 Bento Cards podsumowujące koło
         col_c1, col_c2, col_c3, col_c4 = st.columns(4)
         with col_c1:
             render_bento_card(
-                "Indeks Wiarygodności Koła",
-                f"{def_sredni['kod']} ({sredni_score} pkt)",
-                f"Poziom: {def_sredni['nazwa']}",
-                styl_custom=f"color: {kolor_sredni}; text-shadow: 0 0 14px {kolor_sredni};"
+                "Indeks Wiarygodności Koła (Mediana)",
+                f"{def_mediana['kod']} ({mediana_score} pkt)",
+                f"Mediana Celestia (Średnia: {srednia_score} pkt)",
+                styl_custom=f"color: {kolor_mediana}; text-shadow: 0 0 14px {kolor_mediana};"
             )
         with col_c2:
             pct_prime = (liczba_prime / total_czlonkow * 100) if total_czlonkow > 0 else 0
@@ -184,19 +187,48 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
             "punktem zapadalności dla algorytmu Celestia, badając czy składki zostały uregulowane w okienku przed zebraniem."
         )
 
-        # Formularz dodawania nowego terminu głosowania
-        with st.form("form_dodaj_glosowanie", clear_on_submit=True):
+        # Formularz dodawania nowego terminu głosowania z konfigurowalnym oknem zbiórki
+        with st.form("form_dodaj_glosowanie", clear_on_submit=False):
+            st.markdown("##### ➕ Nowe Głosowanie / Zebranie")
             col_g1, col_g2, col_g3 = st.columns([2, 3, 2])
             with col_g1:
                 nowa_data = st.date_input("Data Głosowania / Zebrania:", value=dzis_pl())
             with col_g2:
-                nowa_nazwa = st.text_input("Nazwa / Okazja:", placeholder="np. Walne Zebranie Członków, Wybory Zarządu Koła")
+                nowa_nazwa = st.text_input("Nazwa / Okazja:", placeholder="np. Walne Zebranie Członków, Wybory Władz Koła")
             with col_g3:
                 nowa_waga_wybor = st.selectbox(
                     "Ranga wydarzenia:",
                     options=["Zwyczajne (waga 1.0)", "Kluczowe / Wybory Władz (waga 1.5)"]
                 )
                 waga_num = 1.5 if "1.5" in nowa_waga_wybor else 1.0
+
+            st.markdown("###### ⏱️ Okno zbiórki składek i termin wymagalności (dopasowane do wielkości koła)")
+            st.caption("W małym kole wystarczy krótsze okno (np. 5–7 dni), w dużym kole dłuższe (np. 14–30 dni). Nie stosujemy sztywnego 14-dniowego limitu.")
+            
+            c_okno1, c_okno2, c_okno3 = st.columns([2, 2, 3])
+            with c_okno1:
+                dni_przed_input = st.number_input(
+                    "Długość zbiórki (dni przed):",
+                    min_value=1,
+                    max_value=90,
+                    value=14,
+                    step=1,
+                    help="Liczba dni przed zebraniem, od kiedy otwarta jest oficjalna zbiórka składek."
+                )
+                data_od_domyslna = nowa_data - timedelta(days=int(dni_przed_input))
+            with c_okno2:
+                dni_po_input = st.number_input(
+                    "Dopuszczalny poślizg (dni po):",
+                    min_value=0,
+                    max_value=30,
+                    value=0,
+                    step=1,
+                    help="0 dni = składki muszą być uregulowane najpóźniej w dniu zebrania. > 0 = dodatkowe dni po zebraniu."
+                )
+                data_do_domyslna = nowa_data + timedelta(days=int(dni_po_input))
+            with c_okno3:
+                dni_lacznie = (data_do_domyslna - data_od_domyslna).days + 1
+                st.info(f"📅 **Okno zbiórki:** od **{data_od_domyslna}** do **{data_do_domyslna}** (łącznie **{dni_lacznie} dni** na wpłatę).")
 
             nowy_opis = st.text_input("Opcjonalny opis / uwagi:", placeholder="np. Wymóg braku zadłużenia na dzień otwarcia obrad")
 
@@ -209,11 +241,15 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
                         kolo_id=wybrane_kolo_id,
                         data_glosowania=nowa_data,
                         nazwa=nowa_nazwa,
+                        data_zbiorki_od=data_od_domyslna,
+                        data_wymagalnosci_do=data_do_domyslna,
+                        dni_zbiorki_przed=int(dni_przed_input),
+                        dni_wymagalnosci_po=int(dni_po_input),
                         opis=nowy_opis,
                         waga=waga_num,
                         user_id=curr_user_id
                     )
-                    st.success(f"Pomyślnie zarejestrowano termin głosowania: '{nowa_nazwa}' ({nowa_data}).")
+                    st.success(f"Pomyślnie zarejestrowano termin: '{nowa_nazwa}' (Zbiórka od {data_od_domyslna} do {data_do_domyslna}).")
                     st.rerun()
 
         st.markdown("---")
@@ -229,10 +265,17 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
             # Prezentacja tabeli terminów z opcją usuwania
             tablica_terminow = []
             for _, r in terminy_df.iterrows():
+                d_glos = r["data_glosowania"]
+                d_od = r["data_zbiorki_od"] if pd.notna(r.get("data_zbiorki_od")) else (d_glos - timedelta(days=int(r.get("dni_zbiorki_przed") or 14)))
+                d_do = r["data_wymagalnosci_do"] if pd.notna(r.get("data_wymagalnosci_do")) else (d_glos + timedelta(days=int(r.get("dni_wymagalnosci_po") or 0)))
+                dni_trwania = (d_do - d_od).days + 1
+
                 tablica_terminow.append({
                     "ID": r["id"],
-                    "Data Głosowania": str(r["data_glosowania"]),
+                    "Data Głosowania": str(d_glos),
                     "Nazwa Wydarzenia": r["nazwa"],
+                    "Okno Zbiórki": f"{d_od} → {d_do} ({dni_trwania} dni)",
+                    "Termin Wymagalności": str(d_do),
                     "Ranga / Waga": f"{float(r['waga']):.1f}x",
                     "Opis": r["opis"] or "—",
                     "Zarejestrował": r["dodal_imie"] or "System",
@@ -240,7 +283,11 @@ def render_tab_celestia(wybrane_kolo_id: int, dane_przeliczone: list, curr_user_
                 })
 
             df_t = pd.DataFrame(tablica_terminow)
-            st.dataframe(df_t[["Data Głosowania", "Nazwa Wydarzenia", "Ranga / Waga", "Opis", "Zarejestrował", "Data Wpisu"]], width="stretch", hide_index=True)
+            st.dataframe(
+                df_t[["Data Głosowania", "Nazwa Wydarzenia", "Okno Zbiórki", "Termin Wymagalności", "Ranga / Waga", "Opis", "Zarejestrował", "Data Wpisu"]], 
+                width="stretch", 
+                hide_index=True
+            )
 
             # Sekcja usuwania wpisu
             st.markdown("##### 🗑️ Usuwanie terminu głosowania")

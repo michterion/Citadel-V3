@@ -171,13 +171,15 @@ def render_tab_profile(dane_przeliczone, dzis):
     audyt_glosowan = osoba.get("celestia_audyt_glosowan", [])
     if audyt_glosowan:
         st.markdown("#### 🗳️ Historia Dyscypliny na Głosowaniach Koła")
-        st.caption("Ocena salda oraz wpłat w 14-dniowym okienku zapadalności przed każdym terminem głosowania:")
+        st.caption("Ocena salda oraz wpłat w skonfigurowanym oknie zbiórki przed każdym terminem zapadalności:")
         df_audyt = pd.DataFrame([
             {
-                "Data Głosowania": a["data"],
+                "Data Głosowania": a["data_glosowania"],
                 "Wydarzenie / Zebranie": a["nazwa"],
-                "Saldo na Dzień Zebrania": f"{a['saldo_pln']:.2f} zł",
-                "Wpłata w Oknie (14 dni)": f"{a['wplata_w_oknie_pln']:.2f} zł",
+                "Okno Zbiórki": a.get("okres_zbiorki", "—"),
+                "Wymagalność do": a.get("data_wymagalnosci", a["data_glosowania"]),
+                "Saldo na Termin": f"{a['saldo_pln']:.2f} zł",
+                "Wpłata w Oknie": f"{a['wplata_w_oknie_pln']:.2f} zł",
                 "Ocena (0-100)": f"{a['punkty']} pkt",
                 "Status Zdarzenia": a["status"]
             }

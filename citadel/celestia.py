@@ -183,9 +183,25 @@ def oblicz_rating_celestia_dla_czlonka(
         for _, row_g in terminy_glosowan_df.iterrows():
             d_glos = parse_date(row_g["data_glosowania"])
             if d_glos >= data_wst and d_glos <= dzis:
+                # Dynamiczny termin otwarcia zbiórki
+                if pd.notna(row_g.get("data_zbiorki_od")):
+                    d_od = parse_date(row_g["data_zbiorki_od"])
+                else:
+                    dni_przed = int(row_g.get("dni_zbiorki_przed") or 14)
+                    d_od = d_glos - timedelta(days=dni_przed)
+
+                # Dynamiczny ostateczny termin wymagalności
+                if pd.notna(row_g.get("data_wymagalnosci_do")):
+                    d_do = parse_date(row_g["data_wymagalnosci_do"])
+                else:
+                    dni_po = int(row_g.get("dni_wymagalnosci_po") or 0)
+                    d_do = d_glos + timedelta(days=dni_po)
+
                 glosowania_w_stazu.append({
                     "id": row_g.get("id"),
                     "data": d_glos,
+                    "data_zbiorki_od": d_od,
+                    "data_wymagalnosci_do": d_do,
                     "nazwa": row_g.get("nazwa", "Głosowanie Koła"),
                     "waga": float(row_g.get("waga", 1.0))
                 })
@@ -199,39 +215,42 @@ def oblicz_rating_celestia_dla_czlonka(
         for g in glosowania_w_stazu:
             d_glos = g["data"]
             waga_g = g["waga"]
+            okno_start = g["data_zbiorki_od"]
+            termin_wymagalnosci = g["data_wymagalnosci_do"]
 
-            # Wyznaczenie salda członka na koniec dnia głosowania d_glos
-            sum_wpl_do_glos = sum(kw for d, kw in wplaty_map.items() if d <= d_glos)
-            sum_rec_do_glos = sum(kw for d, kw in reczne_map.items() if d <= d_glos)
-            sum_kor_do_glos = sum(kw for d, kw in korekty_map.items() if d <= d_glos)
-            nal_auto_do_glos, _ = oblicz_naliczenia_gr(data_wst, data_ur, reczny_param, d_glos)
+            # Wyznaczenie salda członka na moment terminu wymagalności
+            sum_wpl_do_wym = sum(kw for d, kw in wplaty_map.items() if d <= termin_wymagalnosci)
+            sum_rec_do_wym = sum(kw for d, kw in reczne_map.items() if d <= termin_wymagalnosci)
+            sum_kor_do_wym = sum(kw for d, kw in korekty_map.items() if d <= termin_wymagalnosci)
+            nal_auto_do_wym, _ = oblicz_naliczenia_gr(data_wst, data_ur, reczny_param, termin_wymagalnosci)
             
-            saldo_na_glos_gr = saldo_start_gr + sum_wpl_do_glos + sum_kor_do_glos - (nal_auto_do_glos + sum_rec_do_glos)
+            saldo_na_wym_gr = saldo_start_gr + sum_wpl_do_wym + sum_kor_do_wym - (nal_auto_do_wym + sum_rec_do_wym)
 
-            # Wpłaty w okienku zapadalności: [d_glos - 14 dni, d_glos]
-            okno_start = d_glos - timedelta(days=14)
-            wplaty_w_oknie_gr = sum(kw for d, kw in wplaty_map.items() if okno_start <= d <= d_glos)
+            # Wpłaty w skonfigurowanym oknie zbiórki: [okno_start, termin_wymagalnosci]
+            wplaty_w_oknie_gr = sum(kw for d, kw in wplaty_map.items() if okno_start <= d <= termin_wymagalnosci)
 
-            # Wpłaty w okienku poślizgu: (d_glos, d_glos + 3 dni]
-            okno_poslizgu = d_glos + timedelta(days=3)
-            wplaty_poslizg_gr = sum(kw for d, kw in wplaty_map.items() if d_glos < d <= okno_poslizgu)
+            # Wpłaty w okienku poślizgu: (termin_wymagalnosci, termin_wymagalnosci + 3 dni]
+            okno_poslizgu = termin_wymagalnosci + timedelta(days=3)
+            wplaty_poslizg_gr = sum(kw for d, kw in wplaty_map.items() if termin_wymagalnosci < d <= okno_poslizgu)
 
-            # Stawka statutowa w miesiącu głosowania
-            _, stawka_g_gr = pobierz_stawke_za_miesiac(data_wst, data_ur, reczny_param, d_glos)
+            # Stawka statutowa w miesiącu wymagalności
+            _, stawka_g_gr = pobierz_stawke_za_miesiac(data_wst, data_ur, reczny_param, termin_wymagalnosci)
             stawka_g_gr = max(stawka_g_gr, 600)
 
+            dni_okna = max(1, (termin_wymagalnosci - okno_start).days)
+
             # Ocena zdarzenia głosowania (0 - 100 pkt)
-            if saldo_na_glos_gr >= 0:
+            if saldo_na_wym_gr >= 0:
                 pkt_zdarzenia = 100
                 if wplaty_w_oknie_gr > 0:
-                    status_zdarzenia = "🟢 Spłacono w oknie przed głosowaniem (Czyste konto)"
+                    status_zdarzenia = f"🟢 Spłacono w oknie zbiórki ({dni_okna} dni) — Czyste konto"
                 else:
                     status_zdarzenia = "🟢 Stała nadpłata / Czyste konto"
             else:
-                miesiace_dlugu = abs(saldo_na_glos_gr) / stawka_g_gr
+                miesiace_dlugu = abs(saldo_na_wym_gr) / stawka_g_gr
                 if wplaty_poslizg_gr > 0:
                     pkt_zdarzenia = 60
-                    status_zdarzenia = "🟡 Spłata z lekkim poślizgiem (do 3 dni po zebraniu)"
+                    status_zdarzenia = "🟡 Spłata z lekkim poślizgiem (do 3 dni po terminie)"
                 elif miesiace_dlugu <= 2.0:
                     pkt_zdarzenia = 80
                     status_zdarzenia = f"🟢 Drobne zadłużenie ({miesiace_dlugu:.1f} msc) — zachowane prawo głosu"
@@ -244,16 +263,20 @@ def oblicz_rating_celestia_dla_czlonka(
 
             # Współczynnik zanikania w czasie (time-decay): ostatnie głosowania ważą najwięcej
             dni_od_glos = max(0, (dzis - d_glos).days)
-            waga_czasu = math.exp(-0.0018 * dni_od_glos)  # np. 1 rok temu = ~0.52 wagi
+            waga_czasu = math.exp(-0.0018 * dni_od_glos)
             efektywna_waga = waga_g * waga_czasu
 
             suma_wazona_punktow += pkt_zdarzenia * efektywna_waga
             suma_wag += efektywna_waga
 
             audyt_glosowan.append({
-                "data": d_glos.strftime("%Y-%m-%d"),
+                "data_glosowania": d_glos.strftime("%Y-%m-%d"),
                 "nazwa": g["nazwa"],
-                "saldo_pln": saldo_na_glos_gr / 100.0,
+                "data_od": okno_start.strftime("%Y-%m-%d"),
+                "data_do": termin_wymagalnosci.strftime("%Y-%m-%d"),
+                "okres_zbiorki": f"{okno_start.strftime('%Y-%m-%d')} → {termin_wymagalnosci.strftime('%Y-%m-%d')} ({dni_okna} dni)",
+                "data_wymagalnosci": termin_wymagalnosci.strftime("%Y-%m-%d"),
+                "saldo_pln": saldo_na_wym_gr / 100.0,
                 "wplata_w_oknie_pln": wplaty_w_oknie_gr / 100.0,
                 "punkty": pkt_zdarzenia,
                 "status": status_zdarzenia

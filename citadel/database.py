@@ -174,6 +174,10 @@ CREATE TABLE IF NOT EXISTS terminy_glosowan (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     kolo_id BIGINT NOT NULL REFERENCES kola(id) ON DELETE CASCADE,
     data_glosowania DATE NOT NULL,
+    data_zbiorki_od DATE,
+    data_wymagalnosci_do DATE,
+    dni_zbiorki_przed INT NOT NULL DEFAULT 14,
+    dni_wymagalnosci_po INT NOT NULL DEFAULT 0,
     nazwa TEXT NOT NULL,
     opis TEXT,
     waga NUMERIC(3,2) NOT NULL DEFAULT 1.0,
@@ -353,6 +357,10 @@ def init_db_once():
                     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
                     kolo_id BIGINT NOT NULL REFERENCES kola(id) ON DELETE CASCADE,
                     data_glosowania DATE NOT NULL,
+                    data_zbiorki_od DATE,
+                    data_wymagalnosci_do DATE,
+                    dni_zbiorki_przed INT NOT NULL DEFAULT 14,
+                    dni_wymagalnosci_po INT NOT NULL DEFAULT 0,
                     nazwa TEXT NOT NULL,
                     opis TEXT,
                     waga NUMERIC(3,2) NOT NULL DEFAULT 1.0,
@@ -366,6 +374,10 @@ def init_db_once():
             cur.execute("ALTER TABLE uzytkownicy ADD COLUMN IF NOT EXISTS sesja_wersja INT NOT NULL DEFAULT 1;")
             cur.execute("ALTER TABLE uzytkownicy ADD COLUMN IF NOT EXISTS ostatnia_aktywnosc TIMESTAMPTZ;")
             cur.execute("ALTER TABLE wplaty_oczekujace ADD COLUMN IF NOT EXISTS idempotency_key TEXT UNIQUE;")
+            cur.execute("ALTER TABLE terminy_glosowan ADD COLUMN IF NOT EXISTS data_zbiorki_od DATE;")
+            cur.execute("ALTER TABLE terminy_glosowan ADD COLUMN IF NOT EXISTS data_wymagalnosci_do DATE;")
+            cur.execute("ALTER TABLE terminy_glosowan ADD COLUMN IF NOT EXISTS dni_zbiorki_przed INT NOT NULL DEFAULT 14;")
+            cur.execute("ALTER TABLE terminy_glosowan ADD COLUMN IF NOT EXISTS dni_wymagalnosci_po INT NOT NULL DEFAULT 0;")
 
             # Indeksy wydajnościowe na kluczach obcych i filtrach
             cur.execute("""
@@ -688,20 +700,39 @@ def generuj_zrzut_bazy_sql():
 def pobierz_terminy_glosowan_kola(kolo_id: int):
     """Pobiera wszystkie zarejestrowane terminy głosowań / wymagalności dla danego koła."""
     return db_query("""
-        SELECT tg.id, tg.kolo_id, tg.data_glosowania, tg.nazwa, tg.opis, tg.waga, tg.utworzono_o, tg.utworzono_przez,
-               u.imie_nazwisko as dodal_imie
+        SELECT tg.id, tg.kolo_id, tg.data_glosowania, tg.data_zbiorki_od, tg.data_wymagalnosci_do,
+               tg.dni_zbiorki_przed, tg.dni_wymagalnosci_po, tg.nazwa, tg.opis, tg.waga, 
+               tg.utworzono_o, tg.utworzono_przez, u.imie_nazwisko as dodal_imie
         FROM terminy_glosowan tg
         LEFT JOIN uzytkownicy u ON tg.utworzono_przez = u.id
         WHERE tg.kolo_id = %s
         ORDER BY tg.data_glosowania DESC, tg.id DESC
     """, (kolo_id,))
 
-def dodaj_termin_glosowania(kolo_id: int, data_glosowania, nazwa: str, opis: str = None, waga: float = 1.0, user_id: int = None):
-    """Rejestruje nowy termin głosowania dla koła jako punkt zapadalności ratingu Celestia."""
+def dodaj_termin_glosowania(
+    kolo_id: int, 
+    data_glosowania, 
+    nazwa: str, 
+    data_zbiorki_od = None, 
+    data_wymagalnosci_do = None, 
+    dni_zbiorki_przed: int = 14, 
+    dni_wymagalnosci_po: int = 0,
+    opis: str = None, 
+    waga: float = 1.0, 
+    user_id: int = None
+):
+    """Rejestruje nowy termin głosowania dla koła z konfigurowalnym oknem zbiórki i terminem wymagalności."""
     db_execute("""
-        INSERT INTO terminy_glosowan (kolo_id, data_glosowania, nazwa, opis, waga, utworzono_przez)
-        VALUES (%s, %s, %s, %s, %s, %s)
-    """, (kolo_id, data_glosowania, nazwa.strip(), opis.strip() if opis else None, float(waga), user_id))
+        INSERT INTO terminy_glosowan (
+            kolo_id, data_glosowania, data_zbiorki_od, data_wymagalnosci_do, 
+            dni_zbiorki_przed, dni_wymagalnosci_po, nazwa, opis, waga, utworzono_przez
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """, (
+        kolo_id, data_glosowania, data_zbiorki_od, data_wymagalnosci_do,
+        int(dni_zbiorki_przed), int(dni_wymagalnosci_po), nazwa.strip(), 
+        opis.strip() if opis else None, float(waga), user_id
+    ))
 
 def usun_termin_glosowania(termin_id: int, kolo_id: int):
     """Usuwa termin głosowania dla danego koła."""
