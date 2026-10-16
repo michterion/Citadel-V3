@@ -1,10 +1,11 @@
 from datetime import date
-import streamlit as st
 
+import streamlit as st
+from calculations import waliduj_daty_czlonka
 from config import dzis_pl, parse_date
 from database import db_execute, usun_czlonka_bezpiecznie
-from calculations import waliduj_daty_czlonka
 from rbac import moze
+
 
 def render_tab_czlonkowie(dane_przeliczone, wybrane_kolo_id, rola_uzytkownika):
     st.markdown("<div style='max-width: 650px;'>", unsafe_allow_html=True)
@@ -47,13 +48,14 @@ def render_tab_czlonkowie(dane_przeliczone, wybrane_kolo_id, rola_uzytkownika):
         osoba_edytowana = next(d for d in dane_przeliczone if d["id"] == czlonek_edit_id)
         with st.form("form_edytuj_czlonka"):
             nowe_imie = st.text_input("Imię i Nazwisko", value=osoba_edytowana["imie_nazwisko"])
+            dzis_granica = dzis_pl()
             data_ur_val = parse_date(osoba_edytowana["data_ur"])
             data_wst_val = parse_date(osoba_edytowana["data_wst"])
-            nowa_data_ur = st.date_input("Data urodzenia", value=data_ur_val, min_value=date(1940, 1, 1), max_value=dzis_pl())
-            nowa_data_wst = st.date_input("Data przystąpienia", value=data_wst_val, min_value=date(2015, 1, 1), max_value=dzis_pl())
+            nowa_data_ur = st.date_input("Data urodzenia", value=min(data_ur_val, dzis_granica), min_value=date(1940, 1, 1), max_value=dzis_granica)
+            nowa_data_wst = st.date_input("Data przystąpienia", value=min(data_wst_val, dzis_granica), min_value=date(2015, 1, 1), max_value=dzis_granica)
             nowe_s_start_pln = st.number_input("Saldo początkowe (PLN)", value=float(osoba_edytowana["saldo_start_gr"] / 100.0), step=1.0)
             nowy_param = st.selectbox("Próg składek", ["AUTO", "B", "M", "S"], index=["AUTO", "B", "M", "S"].index(osoba_edytowana["reczny_parametr"] if osoba_edytowana["reczny_parametr"] in ["AUTO", "B", "M", "S"] else "AUTO"))
-            
+
             czy_zmieniono_krytyczne = (nowa_data_wst != data_wst_val) or (int(round(nowe_s_start_pln * 100)) != osoba_edytowana["saldo_start_gr"])
             potwierdzenie_krytyczne = not czy_zmieniono_krytyczne
             if czy_zmieniono_krytyczne:

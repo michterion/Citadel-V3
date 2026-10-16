@@ -93,3 +93,39 @@ def test_poslizg_max_3_dni():
     res_4dni = oblicz_rating_celestia_dla_czlonka(1, dane_czl, terminy_df, wplaty_4dni, pd.DataFrame(), pd.DataFrame(), date(2026, 10, 15))
     assert res_4dni["audyt_glosowan"][0]["punkty"] == 80
 
+
+def test_celestia_data_wstapienia_przyszlosc_zabezpieczenie():
+    from datetime import date
+
+    import pandas as pd
+    from celestia import oblicz_rating_celestia_dla_czlonka
+
+    # Przypadek błędu w dacie wstąpienia (np. 2026-10-28 zamiast 2024-10-28)
+    dzis = date(2026, 10, 14)
+    dane_czl = {
+        "data_wst": date(2026, 10, 28),
+        "data_ur": date(2004, 6, 27),
+        "reczny_parametr": None,
+        "saldo_start_gr": -3500,
+        "saldo_akt_gr": -2500,
+        "naliczone_gr": 0,
+        "kdi_val": None,
+    }
+
+    # Nadchodzące zebranie za 3 dni (2026-10-17)
+    terminy_df = pd.DataFrame([{
+        "id": 1,
+        "data_glosowania": date(2026, 10, 17),
+        "dni_zbiorki_przed": 14,
+        "dni_wymagalnosci_po": 3,
+        "waga": 1.0,
+        "nazwa": "Zebranie regionu"
+    }])
+
+    res = oblicz_rating_celestia_dla_czlonka(66, dane_czl, terminy_df, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), dzis)
+    # Głosowanie nie powinno zostać odrzucone jako "przed stażem"
+    assert res["filary"]["liczba_glosowan"] == 1
+    assert res["filary"]["vdc_score"] is not None
+    assert res["rating"] in ["AAA", "AA", "A", "BBB", "BB", "B", "CCC", "CC", "C", "D", "DD", "DDD"]
+
+

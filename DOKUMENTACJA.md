@@ -495,3 +495,4 @@ pg_restore -h localhost -p 5432 -U citadel_user -d citadel_db -v "citadel_backup
 > [!IMPORTANT]
 > **Poufność Danych i Bezpieczeństwo Produkcyjne**:  
 > Plik `secrets.toml` oraz wszelkie wygenerowane zrzuty baz danych (`*.dump`, `*.sql`) podlegają ścisłym regułom pliku `.gitignore`. Nigdy nie publikuj haseł bazodanowych ani certyfikatów SSL w publicznych gałęziach repozytorium.
+

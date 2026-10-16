@@ -226,6 +226,9 @@ def oblicz_rating_celestia_dla_czlonka(
     Pozostałe filary: KDI, bieżący stan salda, rytm wpłat.
     """
     data_wst = parse_date(dane_czlonka["data_wst"])
+    # Zabezpieczenie przed błędną datą wstąpienia z przyszłości:
+    # Aktywny członek koła ewaluowany na dzień dzis ma efektywny staż co najmniej od dnia dzisiejszego.
+    efektywna_data_wst = min(data_wst, dzis)
     data_ur = parse_date(dane_czlonka["data_ur"])
     reczny_param = dane_czlonka.get("reczny_parametr")
     saldo_start_gr = int(dane_czlonka.get("saldo_start_gr", 0))
@@ -276,9 +279,9 @@ def oblicz_rating_celestia_dla_czlonka(
             d_do = d_glos + timedelta(days=dni_po)
 
             # Uwzględniamy głosowania:
-            # 1. Członek wstąpił przed lub w dniu zebrania (d_glos >= data_wst)
+            # 1. Członek wstąpił przed lub w dniu zebrania (d_glos >= efektywna_data_wst)
             # 2. Zebranie już się odbyło LUB okno zbiórki jest już otwarte (d_od <= dzis) LUB zebranie odbędzie się w ciągu 30 dni
-            if d_glos >= data_wst and (d_glos <= dzis or d_od <= dzis or d_glos <= dzis + timedelta(days=30)):
+            if d_glos >= efektywna_data_wst and (d_glos <= dzis or d_od <= dzis or d_glos <= dzis + timedelta(days=30)):
                 glosowania_w_stazu.append({
                     "id": row_g.get("id"),
                     "data": d_glos,
@@ -305,7 +308,7 @@ def oblicz_rating_celestia_dla_czlonka(
             sum_wpl_do_glos = sum(kw for d, kw in wplaty_map.items() if d <= d_glos)
             sum_rec_do_glos = sum(kw for d, kw in reczne_map.items() if d <= d_glos)
             sum_kor_do_glos = sum(kw for d, kw in korekty_map.items() if d <= d_glos)
-            nal_auto_do_glos, _ = oblicz_naliczenia_gr(data_wst, data_ur, reczny_param, d_glos)
+            nal_auto_do_glos, _ = oblicz_naliczenia_gr(efektywna_data_wst, data_ur, reczny_param, d_glos)
 
             saldo_na_glos_gr = saldo_start_gr + sum_wpl_do_glos + sum_kor_do_glos - (nal_auto_do_glos + sum_rec_do_glos)
 
@@ -320,7 +323,7 @@ def oblicz_rating_celestia_dla_czlonka(
                 wplaty_poslizg_gr = 0
 
             # Stawka statutowa w miesiącu zebrania
-            _, stawka_g_gr = pobierz_stawke_za_miesiac(data_wst, data_ur, reczny_param, d_glos)
+            _, stawka_g_gr = pobierz_stawke_za_miesiac(efektywna_data_wst, data_ur, reczny_param, d_glos)
             stawka_g_gr = max(stawka_g_gr, 600)
 
             dni_okna = max(1, (d_glos - okno_start).days + 1)
@@ -479,7 +482,7 @@ def oblicz_rating_celestia_dla_czlonka(
     # FILAR 4: Rytm i Regularność Wpłat - Waga: 5%
     # ---------------------------------------------------------------------
     liczba_wplat = len(wplaty_map)
-    staz_dni = max(1, (dzis - data_wst).days)
+    staz_dni = max(1, (dzis - efektywna_data_wst).days)
 
     if liczba_wplat == 0:
         rytm_score = 800 if (dane_czlonka.get("naliczone_gr", 0) == 0 and saldo_akt_gr >= 0) else 50
